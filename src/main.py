@@ -44,13 +44,6 @@ def generateRotationMatrixY(angle):
         [0, 0, 0, 1]
     ], dtype=np.float32)
 
-# performs matrix multiplication on a vertex to update its position
-# returns results as 3D coordinates
-def transformVertex(vertex, matrix):
-    v = np.array(vertex + [1]) # convert to homogenous coordinates
-    transformed = matrix.dot(v)
-    return transformed[:3] / transformed[3] # convert back to 3D coords
-
 def drawCube(rotationAngle):
     glBegin(GL_LINES)
     rotationMatrix = generateRotationMatrixY(rotationAngle)
@@ -58,12 +51,18 @@ def drawCube(rotationAngle):
 
     for edge in edges:
         for vertexIdx in edge:
+            # convert 3D coordinates into 4D homogenous coordinates
             vertex = vertices[vertexIdx] + [1]
             vertex = np.array(vertex, dtype=np.float32)
+
             rotatedVertex = rotationMatrix.dot(vertex)
+            rotatedVertex[2] -= 5 # shift the cube along the z-axis away from the screen
+
             projectedVertex = perspectiveMatrix.dot(rotatedVertex)
+            # perspective division
             if (projectedVertex[3] != 0):
                 projectedVertex = projectedVertex[:3] / projectedVertex[3]
+            
             glVertex3f(*projectedVertex)
     glEnd()
 
