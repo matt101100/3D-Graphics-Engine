@@ -1,8 +1,6 @@
 import pygame
 from pygame.locals import *
 from OpenGL.GL import *
-from OpenGL.GLUT import *
-from OpenGL.GLU import *
 import numpy as np
 import math
 
@@ -63,15 +61,13 @@ def drawCube(rotationAngle):
             if (projectedVertex[3] != 0):
                 projectedVertex = projectedVertex[:3] / projectedVertex[3]
             
-            glVertex3f(*projectedVertex)
+            glVertex3f(*projectedVertex) # draws lines between two vertices
     glEnd()
 
 def main():
     pygame.init()
     display = (800, 600)
     pygame.display.set_mode(display, DOUBLEBUF | OPENGL)
-    gluPerspective(45, display[0] / display[1], 0.1, 50.0)
-    glTranslatef(0.0, 0.0, -5)
 
     clock = pygame.time.Clock()
     rotationAngle = 0
