@@ -103,7 +103,8 @@ def main():
                 running = False
         
         # allow for rotation but prevent the angle value from increasing beyond 2pi
-        rotationAngle = (rotationAngle + 0.02) % (2 * math.pi)
+        rotationAngle = (rotationAngle + 0.02) % (6 * math.pi)
+        print(rotationAngle)
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
         drawCube(rotationAngle)
