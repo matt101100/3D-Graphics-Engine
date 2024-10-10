@@ -33,7 +33,19 @@ def generatePerspectiveMatrix(fov, aspect, near, far):
         [0, 0, -1, 0]
     ], dtype=np.float32)
 
-# creates a rotation matrix handling rotations around the y axis
+"""
+The following 3 functions generate rotation matrices in their respective directions
+Note that the angles are offset from each other to prevent gimbal lock
+"""
+
+def generateRotationMatrixX(angle):
+    return np.array([
+        [1, 0, 0, 0],
+        [0, math.cos(angle / 2), math.sin(angle / 2), 0],
+        [0, -math.sin(angle / 2), math.cos(angle / 2), 0],
+        [0, 0, 0, 1]
+    ])
+
 def generateRotationMatrixY(angle):
     return np.array([
         [math.cos(angle), 0, math.sin(angle), 0],
@@ -42,9 +54,19 @@ def generateRotationMatrixY(angle):
         [0, 0, 0, 1]
     ], dtype=np.float32)
 
+def generateRotationMatrixZ(angle):
+    return np.array([
+        [math.cos(angle / 3), math.sin(angle / 3), 0, 0],
+        [-math.sin(angle / 3), math.cos(angle / 3), 0 ,0],
+        [0, 0, 1, 0],
+        [0, 0, 0, 1]
+    ])
+
 def drawCube(rotationAngle):
     glBegin(GL_LINES)
-    rotationMatrix = generateRotationMatrixY(rotationAngle)
+    rotationMatrixY = generateRotationMatrixY(rotationAngle)
+    rotationMatrixX = generateRotationMatrixX(rotationAngle)
+    rotationMatrixZ = generateRotationMatrixZ(rotationAngle)
     perspectiveMatrix = generatePerspectiveMatrix(np.radians(45), 4/3, 0.1, 50.0)
 
     for edge in edges:
@@ -53,8 +75,10 @@ def drawCube(rotationAngle):
             vertex = vertices[vertexIdx] + [1]
             vertex = np.array(vertex, dtype=np.float32)
 
-            rotatedVertex = rotationMatrix.dot(vertex)
-            rotatedVertex[2] -= 5 # shift the cube along the z-axis away from the screen
+            rotatedVertex = rotationMatrixX.dot(vertex)
+            rotatedVertex = rotationMatrixY.dot(rotatedVertex)
+            rotatedVertex = rotationMatrixZ.dot(rotatedVertex)
+            rotatedVertex[2] -= 10 # shift the cube along the z-axis away from the screen
 
             projectedVertex = perspectiveMatrix.dot(rotatedVertex)
             # perspective division
@@ -78,7 +102,8 @@ def main():
             if (event.type == pygame.QUIT):
                 running = False
         
-        rotationAngle += 0.02
+        # allow for rotation but prevent the angle value from increasing beyond 2pi
+        rotationAngle = (rotationAngle + 0.02) % (2 * math.pi)
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
         drawCube(rotationAngle)
