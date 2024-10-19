@@ -6,14 +6,14 @@ import math
 
 # define cube vertices and edges
 vertices = [
-    [-1, -1, -1],
-    [1, -1, -1],
-    [1, 1, -1],
-    [-1, 1, -1],
-    [-1, -1, 1],
-    [1, -1, 1],
-    [1, 1, 1],
-    [-1, 1, 1]
+    [-1, -1, -1], # vertex 0
+    [1, -1, -1],  # vertex 1
+    [1, 1, -1],   # vertex 2
+    [-1, 1, -1],  # vertex 3
+    [-1, -1, 1],  # vertex 4
+    [1, -1, 1],   # vertex 5
+    [1, 1, 1],    # vertex 6
+    [-1, 1, 1]    # vertex 7
 ]
 
 faces = [
@@ -87,40 +87,62 @@ Returns a bool based on whether a face with faceNormal can be seen from
 the current camera position to the faceCenter
 """
 def isFaceVisible(faceNormal: list[int], faceCenter: list[int], cameraPos=[0, 0, 0]) -> bool:
-    viewDirection = -np.array(faceCenter)
+    viewDirection = cameraPos - np.array(faceCenter)
     dotProduct = np.dot(faceNormal, viewDirection)
     return dotProduct > 0 # only True when face is visible
 
 """
-Draws a cube wireframe to the screen.
+Draws a cube wireframe to the screen
 Computes position of each vertex after rotation and translation into the z-axis
 and uses back-face culling to hide faces that are not visible from the
 current camera position
 """
 def drawCube(rotationAngle: float) -> None:
     glBegin(GL_LINES)
+    # set up rotation and perspective matrices
+    # note that we combine the rotation matrices such that on each frame
+    # we rotate first in the x direction, then y, then z
     rotationMatrixY = generateRotationMatrixY(rotationAngle)
     rotationMatrixX = generateRotationMatrixX(rotationAngle)
     rotationMatrixZ = generateRotationMatrixZ(rotationAngle)
+    combinedRotationMatrix = rotationMatrixX.dot(rotationMatrixY).dot(rotationMatrixZ)
     perspectiveMatrix = generatePerspectiveMatrix(np.radians(45), 4/3, 0.1, 50.0)
 
-    for edge in edges:
-        for vertexIdx in edge:
-            # convert 3D coordinates into 4D homogenous coordinates
-            vertex = vertices[vertexIdx] + [1]
-            vertex = np.array(vertex, dtype=np.float32)
+    for face, normal in zip(faces, faceNormals):
+        # rotate the normal
+        rNormal = combinedRotationMatrix.dot(normal + [0])[:3]
 
-            rotatedVertex = rotationMatrixX.dot(vertex)
-            rotatedVertex = rotationMatrixY.dot(rotatedVertex)
-            rotatedVertex = rotationMatrixZ.dot(rotatedVertex)
-            rotatedVertex[2] -= 10 # shift the cube along the z-axis away from the screen
+        # rotate cube face vertices
+        faceVertices = [vertices[i] for i in face]
+        rotatedVertices = [combinedRotationMatrix.dot(np.append(v, 1))[:3] for v in faceVertices]
 
-            projectedVertex = perspectiveMatrix.dot(rotatedVertex)
-            # perspective division
-            if (projectedVertex[3] != 0):
-                projectedVertex = projectedVertex[:3] / projectedVertex[3]
+        # compute the face center by averaging rotated vertices
+        faceCenter = np.mean(rotatedVertices, axis=0)
+        faceCenter[2] -= 10 # move cube back along the z-axis
+
+        # check if face is visible
+        if (isFaceVisible(rNormal, faceCenter)):
+            pass
+
+
+    # for edge in edges:
+    #     for vertexIdx in edge:
+    #         # convert 3D coordinates into 4D homogenous coordinates
+    #         vertex = vertices[vertexIdx] + [1]
+    #         vertex = np.array(vertex, dtype=np.float32)
+
+    #         rotatedVertex = rotationMatrixX.dot(vertex)
+    #         rotatedVertex = rotationMatrixY.dot(rotatedVertex)
+    #         rotatedVertex = rotationMatrixZ.dot(rotatedVertex)
+
+    #         rotatedVertex[2] -= 10 # shift the cube along the z-axis away from the screen
+
+    #         projectedVertex = perspectiveMatrix.dot(rotatedVertex)
+    #         # perspective division
+    #         if (projectedVertex[3] != 0):
+    #             projectedVertex = projectedVertex[:3] / projectedVertex[3]
             
-            glVertex3f(*projectedVertex) # draws lines between two vertices
+    #         glVertex3f(*projectedVertex) # draws lines between two vertices
     glEnd()
 
 def main():
