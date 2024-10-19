@@ -127,6 +127,14 @@ def drawCube(rotationAngle: float) -> None:
                 rVertex1[2] -= 5
                 rVertex2[2] -= 5
 
+                """
+                !!! Note !!! 
+                The values faceCenter[2], rVertex1[2] and rVertex2[2]
+                need to be equal or else there is a slight mismatch between
+                vertices and normal, leading to janky visible --> invisible
+                edge transitions as objects rotate / move
+                """
+
                 # apply perspective projection matrix
                 projectedVertex1 = perspectiveMatrix.dot(rVertex1)
                 projectedVertex2 = perspectiveMatrix.dot(rVertex2)
