@@ -35,12 +35,6 @@ faceNormals = [
     [0, 1, 0]    # top
 ]
 
-edges = [
-    (0, 1), (1, 2), (2, 3), (3, 0),
-    (4, 5), (5, 6), (6, 7), (7, 4),
-    (0, 4), (1, 5), (2, 6), (3, 7)
-]
-
 """
 Generates a perspective matrix based on the given fov, aspect ratio and
 near and far plane locations in the z-axis
@@ -119,17 +113,19 @@ def drawCube(rotationAngle: float) -> None:
 
         # compute the face center by averaging rotated vertices
         faceCenter = np.mean(rotatedVertices, axis=0)
-        faceCenter[2] -= 10 # move cube back along the z-axis
+        faceCenter[2] -= 5 # move cube back along the z-axis
 
         # check if face is visible
         if (isFaceVisible(rNormal, faceCenter)):
-            # len(face) project vertices only if the face is visible
-            for i in range(4):
+            # project vertices only if the face is visible
+            for i in range(len(face)):
                 # get edge vertices
                 rVertex1 = np.append(rotatedVertices[i], 1)
                 rVertex2 = np.append(rotatedVertices[(i + 1) % 4], 1)
-                rVertex1[2] -= 10
-                rVertex2[2] -= 10
+
+                # translate rotated vertices the same amount as faceCenter
+                rVertex1[2] -= 5
+                rVertex2[2] -= 5
 
                 # apply perspective projection matrix
                 projectedVertex1 = perspectiveMatrix.dot(rVertex1)
