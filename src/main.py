@@ -3,6 +3,7 @@ from pygame.locals import *
 from OpenGL.GL import *
 import numpy as np
 import math
+from typing import List, Tuple
 
 # define cube vertices and edges
 vertices = [
@@ -122,27 +123,25 @@ def drawCube(rotationAngle: float) -> None:
 
         # check if face is visible
         if (isFaceVisible(rNormal, faceCenter)):
-            pass
+            # len(face) project vertices only if the face is visible
+            for i in range(4):
+                # get edge vertices
+                rVertex1 = np.append(rotatedVertices[i], 1)
+                rVertex2 = np.append(rotatedVertices[(i + 1) % 4], 1)
+                rVertex1[2] -= 10
+                rVertex2[2] -= 10
 
+                # apply perspective projection matrix
+                projectedVertex1 = perspectiveMatrix.dot(rVertex1)
+                projectedVertex2 = perspectiveMatrix.dot(rVertex2)
 
-    # for edge in edges:
-    #     for vertexIdx in edge:
-    #         # convert 3D coordinates into 4D homogenous coordinates
-    #         vertex = vertices[vertexIdx] + [1]
-    #         vertex = np.array(vertex, dtype=np.float32)
+                # apply perspective division
+                projectedVertex1 /= projectedVertex1[3]
+                projectedVertex2 /= projectedVertex2[3]
 
-    #         rotatedVertex = rotationMatrixX.dot(vertex)
-    #         rotatedVertex = rotationMatrixY.dot(rotatedVertex)
-    #         rotatedVertex = rotationMatrixZ.dot(rotatedVertex)
-
-    #         rotatedVertex[2] -= 10 # shift the cube along the z-axis away from the screen
-
-    #         projectedVertex = perspectiveMatrix.dot(rotatedVertex)
-    #         # perspective division
-    #         if (projectedVertex[3] != 0):
-    #             projectedVertex = projectedVertex[:3] / projectedVertex[3]
-            
-    #         glVertex3f(*projectedVertex) # draws lines between two vertices
+                # draw edges of visible faces
+                glVertex3f(*projectedVertex1[:3])
+                glVertex3f(*projectedVertex2[:3])
     glEnd()
 
 def main():
