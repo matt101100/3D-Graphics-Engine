@@ -5,7 +5,7 @@ import numpy as np
 import math
 from typing import List, Tuple
 
-# define cube vertices and edges
+# define cube vertices, faces and normals
 vertices = [
     [-1, -1, -1], # vertex 0
     [1, -1, -1],  # vertex 1
@@ -78,6 +78,15 @@ def generateRotationMatrixZ(angle: float) -> np.ndarray:
     ])
 
 """
+Calculates intensity of lighting based on the face normal and light direction
+"""
+def computeLighting(faceNormal: List[float], faceCenter: np.ndarray) -> float:
+    lightDirection = -np.array(faceCenter) # light comes from the camera at (0, 0, 0)
+    lightDirection = lightDirection / np.linalg.norm(lightDirection)
+    dotProduct = np.dot(faceNormal, lightDirection)
+    return max(dotProduct, 0) # clamp to 0 for normals facing away
+
+"""
 Returns a bool based on whether a face with faceNormal can be seen from
 the current camera position to the faceCenter
 """
@@ -93,7 +102,7 @@ and uses back-face culling to hide faces that are not visible from the
 current camera position
 """
 def drawCube(rotationAngle: float) -> None:
-    glBegin(GL_LINES)
+    glBegin(GL_QUADS)
     # set up rotation and perspective matrices
     # note that we combine the rotation matrices such that on each frame
     # we rotate first in the x direction, then y, then z
@@ -117,6 +126,12 @@ def drawCube(rotationAngle: float) -> None:
 
         # check if face is visible
         if (isFaceVisible(rNormal, faceCenter)):
+            # handle lighting for visible faces
+            lightingIntensity = computeLighting(rNormal, faceCenter)
+
+            color = lightingIntensity # scale color brightness with intensity
+            glColor3f(color, color, color)
+
             # project vertices only if the face is visible
             for i in range(len(face)):
                 # get edge vertices
