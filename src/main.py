@@ -36,13 +36,26 @@ faceNormals = [
 ]
 
 def loadObjectFile(filename: str):
+    """
+    Load an OBJ file and return vertices, normals, and faces.
+
+    :param filename: path to the .obj file
+    :return: tuple containing lists of vertices, normals, and faces
+    """
     pass
 
-"""
-Generates a perspective matrix based on the given fov, aspect ratio and
-near and far plane locations in the z-axis
-"""
-def generatePerspectiveMatrix(fov: float, aspect: float, near: float, far: float) -> np.ndarray:
+def generatePerspectiveMatrix(fov: float, aspect: float, near: float, 
+                              far: float) -> np.ndarray:
+    """
+    Generates a perspective matrix based on the given fov, aspect ratio and
+    near and far plane locations in the z-axis.
+
+    :param fov: camera field of view
+    :param aspect: desired image aspect ratio
+    :param near: z-axis value representing the near plane
+    :param far: z-axis value representing the far plane
+    :return: numpy 4x4 perspective projection matrix with 32-bit float elements
+    """
     f = 1 / math.tan(fov / 2)
     depth = far - near
     return np.array([
@@ -52,11 +65,13 @@ def generatePerspectiveMatrix(fov: float, aspect: float, near: float, far: float
         [0, 0, -1, 0]
     ], dtype=np.float32)
 
-"""
-The following 3 functions generate rotation matrices
-for multiplying a position vector to compute position after rotation by angle
-"""
 def generateRotationMatrixX(angle: float) -> np.ndarray:
+    """
+    Generates a 4x4 rotation matrix in the x direction.
+
+    :param angle: angle through which to rotate a given vertex
+    :return: numpy 4x4 rotation matrix
+    """
     return np.array([
         [1, 0, 0, 0],
         [0, math.cos(angle / 2), math.sin(angle / 2), 0],
@@ -65,6 +80,12 @@ def generateRotationMatrixX(angle: float) -> np.ndarray:
     ])
 
 def generateRotationMatrixY(angle: float) -> np.ndarray:
+    """
+    Generates a 4x4 rotation matrix in the y direction.
+
+    :param angle: angle through which to rotate a given vertex
+    :return: numpy 4x4 rotation matrix
+    """
     return np.array([
         [math.cos(angle), 0, math.sin(angle), 0],
         [0, 1, 0, 0],
@@ -73,6 +94,12 @@ def generateRotationMatrixY(angle: float) -> np.ndarray:
     ], dtype=np.float32)
 
 def generateRotationMatrixZ(angle: float) -> np.ndarray:
+    """
+    Generates a 4x4 rotation matrix in the z direction.
+
+    :param angle: angle through which to rotate a given vertex
+    :return: numpy 4x4 rotation matrix
+    """
     return np.array([
         [math.cos(angle / 3), math.sin(angle / 3), 0, 0],
         [-math.sin(angle / 3), math.cos(angle / 3), 0 ,0],
@@ -80,31 +107,49 @@ def generateRotationMatrixZ(angle: float) -> np.ndarray:
         [0, 0, 0, 1]
     ])
 
-"""
-Calculates intensity of lighting based on the face normal and light direction
-"""
 def computeLighting(faceNormal: List[float], faceCenter: np.ndarray) -> float:
-    lightDirection = -np.array(faceCenter) # light comes from the camera at (0, 0, 0)
+    """
+    Calculates intensity of lighting based on face normal and light direction.
+
+    :param faceNormal: 1x3 normal given as a list of floats
+    :param faceCenter: center coordinates of face with corresponding faceNormal
+    :return: dot product between the light direction vector and faceNormal
+             defaults to zero in cases where the dot product is negative
+             as incoming light cannot be negative
+    """
+    # light comes from the camera at (0, 0, 0)
+    lightDirection = -np.array(faceCenter)
     lightDirection = lightDirection / np.linalg.norm(lightDirection)
     dotProduct = np.dot(faceNormal, lightDirection)
     return max(dotProduct, 0) # clamp to 0 for normals facing away
 
-"""
-Returns a bool based on whether a face with faceNormal can be seen from
-the current camera position to the faceCenter
-"""
-def isFaceVisible(faceNormal: list[int], faceCenter: list[int], cameraPos=[0, 0, 0]) -> bool:
+def isFaceVisible(faceNormal: List[int], faceCenter: List[int],
+                  cameraPos=[0, 0, 0]) -> bool:
+    """
+    Returns a bool based on whether a face with faceNormal can be seen from
+    the current camera position to the faceCenter. Uses the dot product between
+    the camera and face normal to compute how much the normal projects onto the
+    view direction vector. Values greater than 0 mean that the face is visible.
+
+    :param faceNormal: 1x3 normal vector given as a list of floats
+    :param faceCenter: center coordinates of face with corresponding faceNormal
+    :param cameraPos: position of the viewer / camera, defaults to (0, 0, 0)
+    :return: a bool representing whether the face with given normal and center
+             coordinates is visible from the camera at cameraPos
+    """
     viewDirection = cameraPos - np.array(faceCenter)
     dotProduct = np.dot(faceNormal, viewDirection)
     return dotProduct > 0 # only True when face is visible
 
-"""
-Draws a cube wireframe to the screen
-Computes position of each vertex after rotation and translation into the z-axis
-and uses back-face culling to hide faces that are not visible from the
-current camera position
-"""
 def drawCube(rotationAngle: float) -> None:
+    """
+    Draws a solid cube to the screen with lighting.
+    Computes position of each vertex after rotation and translation into 
+    the z-axis and uses back-face culling to hide faces that are 
+    not visible from the current camera position.
+
+    :param: rotationAngle: the angle through which vertices are rotated
+    """
     glBegin(GL_QUADS)
     # set up rotation and perspective matrices
     # note that we combine the rotation matrices such that on each frame
@@ -169,9 +214,28 @@ def drawCube(rotationAngle: float) -> None:
 def drawObject(vertices: List[List[float]], faces: List[List[int]], 
                normals: List[List[float]], 
                rotationAngles: Tuple[float, float, float]) -> None:
+    """
+    Draw a loaded OBJ model with lighting and perspective projection.
+
+    :param vertices: list of vertex positions
+    :param faces: list of faces (vertex indices)
+    :param normals: list of normals
+    :param rotationAngles: tuple of rotation angles (x, y, z)
+    """
     pass
 
 def main():
+    """
+    Initialises Pygame modules, setting up frameworks for graphics and event
+    handling. Sets up display window for rendering with the given display,
+    OpenGL and double buffering.
+
+    Rendering loop calls functions to display objects and Pygame handles user
+    events, specifically when quit conditions are met, such as by pressing
+    the 'x' on the display window.
+
+    Framerate is capped at 60 fps.
+    """
     # init Pygame and OpenGL settings
     pygame.init()
     display = (800, 600)
