@@ -42,7 +42,12 @@ def loadObjectFile(filename: str):
     :param filename: path to the .obj file
     :return: tuple containing lists of vertices, normals, and faces
     """
-    pass
+    vertices = []
+    normals = []
+    faces = []
+    # TODO: implement file loading and parsing
+
+    return vertices, normals, faces
 
 def generatePerspectiveMatrix(fov: float, aspect: float, near: float, 
                               far: float) -> np.ndarray:
@@ -261,7 +266,6 @@ def main():
         clock.tick(60) # cap framerate
 
     pygame.quit()
-    #test
 
 if __name__ == "__main__":
     main()
