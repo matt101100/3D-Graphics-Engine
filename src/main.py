@@ -35,6 +35,9 @@ faceNormals = [
     [0, 1, 0]    # top
 ]
 
+def loadObjectFile(filename: str):
+    pass
+
 """
 Generates a perspective matrix based on the given fov, aspect ratio and
 near and far plane locations in the z-axis
@@ -162,6 +165,9 @@ def drawCube(rotationAngle: float) -> None:
                 glVertex3f(*projectedVertex1[:3])
                 glVertex3f(*projectedVertex2[:3])
     glEnd()
+
+def drawObject(vertices, faces, normals):
+    pass
 
 def main():
     # init Pygame and OpenGL settings
