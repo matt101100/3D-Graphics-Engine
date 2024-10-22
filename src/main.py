@@ -166,7 +166,9 @@ def drawCube(rotationAngle: float) -> None:
                 glVertex3f(*projectedVertex2[:3])
     glEnd()
 
-def drawObject(vertices, faces, normals):
+def drawObject(vertices: List[List[float]], faces: List[List[int]], 
+               normals: List[List[float]], 
+               rotationAngles: Tuple[float, float, float]) -> None:
     pass
 
 def main():
