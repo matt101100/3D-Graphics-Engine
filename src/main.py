@@ -53,11 +53,26 @@ def loadObjectFile(filename: str):
                 continue
 
             if (words[0] == "v"):
-                pass
+                # parse vertex lines
+                temp = []
+                for s in words[1:4]:
+                    temp.append(float(s))
+                vertices.append(temp)
             elif (words[0] == "vn"):
-                pass
+                # pass normal lines
+                temp = []
+                for s in words[1:4]:
+                    temp.append(float(s))
+                normals.append(temp)
             elif (words[0] == "f"):
-                pass
+                # parse face lines
+                face = []
+                for s in words[1:]:
+                    # each line has form vertex/texture/normal or vertex//normal
+                    indices = s.split('/')
+                    vertexIndex = int(indices[0]) - 1 # convert to 0-indexing
+                    face.append(vertexIndex)
+                faces.append(face)
 
     return vertices, normals, faces
 
