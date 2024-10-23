@@ -281,9 +281,9 @@ def main():
     if (not vertices or not normals or not faces):
         print("Exiting...")
         return 1
-    # print(vertices)
-    # print(normals)
-    # print(faces)
+    print(vertices)
+    print(normals)
+    print(faces)
 
     clock = pygame.time.Clock()
     rotationAngle = 0
