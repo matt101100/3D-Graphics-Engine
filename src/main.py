@@ -46,6 +46,18 @@ def loadObjectFile(filename: str):
     normals = []
     faces = []
     # TODO: implement file loading and parsing
+    with open(filename, 'r') as f:
+        for line in f:
+            words = line.split()
+            if (len(words) == 0):
+                continue
+
+            if (words[0] == "v"):
+                pass
+            elif (words[0] == "vn"):
+                pass
+            elif (words[0] == "f"):
+                pass
 
     return vertices, normals, faces
 
