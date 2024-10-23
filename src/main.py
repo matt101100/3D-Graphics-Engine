@@ -273,19 +273,53 @@ def drawObject(vertices: List[List[float]], faces: List[List[int]],
     # generate perspective projection matrix
     perspectiveMatrix = generatePerspectiveMatrix(np.radians(45), 4/3, 0.1, 50.0)
 
-    # draw object
-    glBegin(GL_LINES)
+    # begin object feature prep and draw
+    glBegin(GL_QUADS)
+    for face, normal in zip(faces, normals):
+        # get and rotate face vertices, also rotate face normal vector
+        # Note: face lines in .obj files provide indices for the vertices 
+        # array that map to vertices that make up that given face
+        faceVertices = [vertices[i] for i in face]
+        rotatedFaceVertices = [combinedRoMatrix.dot(np.append(v, 1))[:3] for v in faceVertices]
+        rotatedNormal = combinedRoMatrix.dot(normal + [0])[:3]
 
+        # compute center of face
+        faceCenter = np.mean(rotatedFaceVertices, axis=0)
+        faceCenter[2] -= 5
+
+        # check if face is visible, only draw if it is
+        if (isFaceVisible(rotatedNormal, faceCenter)):
+            # handle lighting for visible faces
+            lightingIntensity = computeLighting(rotatedNormal, faceCenter)
+            color = lightingIntensity # scale color brightness with intensity
+            glColor3f(color, color, color)
+
+            for i in range(len(face)):
+                rVertex1 = np.append(rotatedFaceVertices[i], 1)
+                rVertex2 = np.append(rotatedFaceVertices[(i + 1) % len(face)], 1)
+
+                # # translate rotated vertices the same amount as faceCenter
+                rVertex1[2] -= 5
+                rVertex2[2] -= 5
+
+                # apply perspective projection
+                projectedVertex1 = perspectiveMatrix.dot(rVertex1)
+                projectedVertex2 = perspectiveMatrix.dot(rVertex2)
+
+                # apply perspective division
+                projectedVertex1 /= projectedVertex1[3]
+                projectedVertex2 /= projectedVertex2[3]
+
+                # draw edges of visible faces
+                glVertex3f(*projectedVertex1[:3])
+                glVertex3f(*projectedVertex2[:3])
     glEnd()
-
-
-    pass
 
 def main():
     """
     Initialises Pygame modules, setting up frameworks for graphics and event
     handling. Sets up display window for rendering with the given display,
-    OpenGL and double buffering.
+    OpenGL and double buffering. Loads object file.
 
     Rendering loop calls functions to display objects and Pygame handles user
     events, specifically when quit conditions are met, such as by pressing
@@ -304,9 +338,9 @@ def main():
     if (not vertices or not normals or not faces):
         print("Exiting...")
         return 1
-    print(vertices)
-    print(normals)
-    print(faces)
+    # print(vertices)
+    # print(normals)
+    # print(faces)
 
     clock = pygame.time.Clock()
     rotationAngle = 0
@@ -322,7 +356,8 @@ def main():
         rotationAngle = (rotationAngle + 0.02) % (6 * math.pi)
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
-        drawCube(rotationAngle)
+        # drawCube(rotationAngle)
+        drawObject(vertices, faces, normals, (rotationAngle, rotationAngle, rotationAngle))
         pygame.display.flip()
 
         clock.tick(60) # cap framerate
