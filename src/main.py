@@ -332,18 +332,19 @@ def main():
     display = (800, 600)
     pygame.display.set_mode(display, DOUBLEBUF | OPENGL)
 
+    clock = pygame.time.Clock()
+    rotationAngle = 0
+
     # load object file
     # TODO: accept file paths from the user
     vertices, normals, faces = loadObjectFile("object-files/cube.obj")
     if (not vertices or not normals or not faces):
         print("Exiting...")
         return 1
-    # print(vertices)
-    # print(normals)
-    # print(faces)
 
-    clock = pygame.time.Clock()
-    rotationAngle = 0
+    # enable depth testing
+    # glEnable(GL_DEPTH_TEST)
+    # glDepthFunc(GL_LESS)
 
     # begin rendering loop
     running = True
