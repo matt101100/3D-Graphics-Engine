@@ -261,6 +261,24 @@ def drawObject(vertices: List[List[float]], faces: List[List[int]],
     :param normals: list of normals
     :param rotationAngles: tuple of rotation angles (x, y, z)
     """
+    # TODO: render objects from data obtained from obj files
+
+    # set up rotation matrices
+    angleX, angleY, angleZ = rotationAngles
+    rotationMatrixY = generateRotationMatrixY(angleX)
+    rotationMatrixX = generateRotationMatrixX(angleY)
+    rotationMatrixZ = generateRotationMatrixZ(angleZ)
+    combinedRoMatrix = rotationMatrixX.dot(rotationMatrixY).dot(rotationMatrixZ)
+
+    # generate perspective projection matrix
+    perspectiveMatrix = generatePerspectiveMatrix(np.radians(45), 4/3, 0.1, 50.0)
+
+    # draw object
+    glBegin(GL_LINES)
+
+    glEnd()
+
+
     pass
 
 def main():
