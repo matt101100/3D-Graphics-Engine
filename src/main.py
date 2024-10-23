@@ -45,35 +45,38 @@ def loadObjectFile(filename: str):
     vertices = []
     normals = []
     faces = []
-    # TODO: implement file loading and parsing
-    with open(filename, 'r') as f:
-        for line in f:
-            words = line.split()
-            if (len(words) == 0):
-                continue
+    try:
+        with open(filename, 'r') as f:
+            for line in f:
+                words = line.split()
+                if (len(words) == 0):
+                    continue
 
-            if (words[0] == "v"):
-                # parse vertex lines
-                temp = []
-                for s in words[1:4]:
-                    temp.append(float(s))
-                vertices.append(temp)
-            elif (words[0] == "vn"):
-                # pass normal lines
-                temp = []
-                for s in words[1:4]:
-                    temp.append(float(s))
-                normals.append(temp)
-            elif (words[0] == "f"):
-                # parse face lines
-                face = []
-                for s in words[1:]:
-                    # each line has form vertex/texture/normal or vertex//normal
-                    indices = s.split('/')
-                    vertexIndex = int(indices[0]) - 1 # convert to 0-indexing
-                    face.append(vertexIndex)
-                faces.append(face)
-
+                if (words[0] == "v"):
+                    # parse vertex lines
+                    temp = []
+                    for s in words[1:4]:
+                        temp.append(float(s))
+                    vertices.append(temp)
+                elif (words[0] == "vn"):
+                    # pass normal lines
+                    temp = []
+                    for s in words[1:4]:
+                        temp.append(float(s))
+                    normals.append(temp)
+                elif (words[0] == "f"):
+                    # parse face lines
+                    face = []
+                    for s in words[1:]:
+                        # each line has form vertex/texture/normal or vertex//normal
+                        indices = s.split('/')
+                        vertexIndex = int(indices[0]) - 1 # convert to 0-indexing
+                        face.append(vertexIndex)
+                    faces.append(face)
+    except FileNotFoundError:
+        print("Error: Invalid file path provided.")
+        return None, None, None
+    
     return vertices, normals, faces
 
 def generatePerspectiveMatrix(fov: float, aspect: float, near: float, 
@@ -272,6 +275,15 @@ def main():
     pygame.init()
     display = (800, 600)
     pygame.display.set_mode(display, DOUBLEBUF | OPENGL)
+
+    # load object file
+    vertices, normals, faces = loadObjectFile("object-files/cube.obj")
+    if (not vertices or not normals or not faces):
+        print("Exiting...")
+        return 1
+    # print(vertices)
+    # print(normals)
+    # print(faces)
 
     clock = pygame.time.Clock()
     rotationAngle = 0
