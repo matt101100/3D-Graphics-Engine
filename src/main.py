@@ -35,7 +35,8 @@ faceNormals = [
     [0, 1, 0]    # top
 ]
 
-def loadObjectFile(filename: str):
+def loadObjectFile(filename: str) -> Tuple[List[List[float]], 
+                                           List[List[float]], List[List[int]]]:
     """
     Load an OBJ file and return vertices, normals, and faces.
 
@@ -58,12 +59,14 @@ def loadObjectFile(filename: str):
                     for s in words[1:4]:
                         temp.append(float(s))
                     vertices.append(temp)
+
                 elif (words[0] == "vn"):
-                    # pass normal lines
+                    # parse normal lines
                     temp = []
                     for s in words[1:4]:
                         temp.append(float(s))
                     normals.append(temp)
+
                 elif (words[0] == "f"):
                     # parse face lines
                     face = []
@@ -73,6 +76,7 @@ def loadObjectFile(filename: str):
                         vertexIndex = int(indices[0]) - 1 # convert to 0-indexing
                         face.append(vertexIndex)
                     faces.append(face)
+                    
     except FileNotFoundError:
         print("Error: Invalid file path provided.")
         return None, None, None
@@ -277,6 +281,7 @@ def main():
     pygame.display.set_mode(display, DOUBLEBUF | OPENGL)
 
     # load object file
+    # TODO: accept file paths from the user
     vertices, normals, faces = loadObjectFile("object-files/cube.obj")
     if (not vertices or not normals or not faces):
         print("Exiting...")
