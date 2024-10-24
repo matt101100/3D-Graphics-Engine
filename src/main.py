@@ -264,6 +264,7 @@ def main():
     # enable depth testing --> possibly implement this myself: depth buffering or painter's algo
     glEnable(GL_DEPTH_TEST)
     glDepthFunc(GL_LESS)
+    #test
 
     # begin rendering loop
     running = True
