@@ -250,7 +250,7 @@ def main():
 
     # load object file
     # TODO: accept file paths from the user
-    vertices, normals, faces = loadObjectFile("object-files/cube.obj")
+    vertices, normals, faces = loadObjectFile("objects/textured-cube/cube-tex.obj")
     if (vertices == None and normals == None and faces == None):
         # invalid filepath end point
         print("Exiting...")
