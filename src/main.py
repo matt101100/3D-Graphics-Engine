@@ -5,35 +5,35 @@ import numpy as np
 import math
 from typing import List, Tuple
 
-# define cube vertices, faces and normals
-vertices = [
-    [-1, -1, -1], # vertex 0
-    [1, -1, -1],  # vertex 1
-    [1, 1, -1],   # vertex 2
-    [-1, 1, -1],  # vertex 3
-    [-1, -1, 1],  # vertex 4
-    [1, -1, 1],   # vertex 5
-    [1, 1, 1],    # vertex 6
-    [-1, 1, 1]    # vertex 7
-]
+# # define cube vertices, faces and normals
+# vertices = [
+#     [-1, -1, -1], # vertex 0
+#     [1, -1, -1],  # vertex 1
+#     [1, 1, -1],   # vertex 2
+#     [-1, 1, -1],  # vertex 3
+#     [-1, -1, 1],  # vertex 4
+#     [1, -1, 1],   # vertex 5
+#     [1, 1, 1],    # vertex 6
+#     [-1, 1, 1]    # vertex 7
+# ]
 
-faces = [
-    (0, 1, 2, 3), # front
-    (4, 5, 6, 7), # back
-    (0, 3, 7, 4), # left
-    (1, 2, 6, 5), # right
-    (0, 1, 5, 4), # bottom
-    (3, 2, 6, 7)  # top
-]
+# faces = [
+#     (0, 1, 2, 3), # front
+#     (4, 5, 6, 7), # back
+#     (0, 3, 7, 4), # left
+#     (1, 2, 6, 5), # right
+#     (0, 1, 5, 4), # bottom
+#     (3, 2, 6, 7)  # top
+# ]
 
-faceNormals = [
-    [0, 0, -1],  # front
-    [0, 0, 1],   # back
-    [-1, 0, 0],  # left
-    [1, 0, 0],   # right
-    [0, -1, 0],  # bottom
-    [0, 1, 0]    # top
-]
+# faceNormals = [
+#     [0, 0, -1],  # front
+#     [0, 0, 1],   # back
+#     [-1, 0, 0],  # left
+#     [1, 0, 0],   # right
+#     [0, -1, 0],  # bottom
+#     [0, 1, 0]    # top
+# ]
 
 def loadObjectFile(filename: str) -> Tuple[List[List[float]], 
                                            List[List[float]], List[List[int]]]:
@@ -113,8 +113,8 @@ def generateRotationMatrixX(angle: float) -> np.ndarray:
     """
     return np.array([
         [1, 0, 0, 0],
-        [0, math.cos(angle / 2), math.sin(angle / 2), 0],
-        [0, -math.sin(angle / 2), math.cos(angle / 2), 0],
+        [0, math.cos(angle), math.sin(angle), 0],
+        [0, -math.sin(angle), math.cos(angle), 0],
         [0, 0, 0, 1]
     ])
 
@@ -140,8 +140,8 @@ def generateRotationMatrixZ(angle: float) -> np.ndarray:
     :return: numpy 4x4 rotation matrix
     """
     return np.array([
-        [math.cos(angle / 3), math.sin(angle / 3), 0, 0],
-        [-math.sin(angle / 3), math.cos(angle / 3), 0 ,0],
+        [math.cos(angle), math.sin(angle), 0, 0],
+        [-math.sin(angle), math.cos(angle), 0 ,0],
         [0, 0, 1, 0],
         [0, 0, 0, 1]
     ])
@@ -162,6 +162,12 @@ def computeLighting(faceNormal: List[float], faceCenter: np.ndarray) -> float:
     dotProduct = np.dot(faceNormal, lightDirection)
     return max(dotProduct, 0) # clamp to 0 for normals facing away
 
+def computeLightingFix(faceNormal):
+    lightDirection = np.array([0, 0, 1])
+    lightDirection = lightDirection / np.linalg.norm(lightDirection)
+    dotProduct = np.dot(faceNormal, lightDirection)
+    return max(dotProduct, 0)
+
 def isFaceVisible(faceNormal: List[int], faceCenter: List[int],
                   cameraPos=[0, 0, 0]) -> bool:
     """
@@ -180,75 +186,93 @@ def isFaceVisible(faceNormal: List[int], faceCenter: List[int],
     dotProduct = np.dot(faceNormal, viewDirection)
     return dotProduct > 0 # only True when face is visible
 
-def drawCube(rotationAngle: float) -> None:
+def isFaceVisibleFix(faceNormal, cameraPos=[0, 0, 1]):
+    dotProduct = np.dot(faceNormal, cameraPos)
+    return dotProduct > 0
+
+def computeNormal(v0, v1, v2):
     """
-    Draws a solid cube to the screen with lighting.
-    Computes position of each vertex after rotation and translation into 
-    the z-axis and uses back-face culling to hide faces that are 
-    not visible from the current camera position.
-
-    :param: rotationAngle: the angle through which vertices are rotated
+    Compute the normal for a triangle given its three vertices.
+    :param v0: First vertex of the triangle
+    :param v1: Second vertex of the triangle
+    :param v2: Third vertex of the triangle
+    :return: Normal vector of the triangle
     """
-    glBegin(GL_QUADS)
-    # set up rotation and perspective matrices
-    # note that we combine the rotation matrices such that on each frame
-    # we rotate first in the x direction, then y, then z
-    rotationMatrixY = generateRotationMatrixY(rotationAngle)
-    rotationMatrixX = generateRotationMatrixX(rotationAngle)
-    rotationMatrixZ = generateRotationMatrixZ(rotationAngle)
-    combinedRotationMatrix = rotationMatrixX.dot(rotationMatrixY).dot(rotationMatrixZ)
-    perspectiveMatrix = generatePerspectiveMatrix(np.radians(45), 4/3, 0.1, 50.0)
+    edge1 = np.array(v1) - np.array(v0)
+    edge2 = np.array(v2) - np.array(v0)
+    normal = np.cross(edge1, edge2)
+    normal /= np.linalg.norm(normal)  # Normalize the normal vector
+    return normal
 
-    for face, normal in zip(faces, faceNormals):
-        # rotate the normal
-        rNormal = combinedRotationMatrix.dot(normal + [0])[:3]
+# def drawCube(rotationAngle: float) -> None:
+#     """
+#     Draws a solid cube to the screen with lighting.
+#     Computes position of each vertex after rotation and translation into 
+#     the z-axis and uses back-face culling to hide faces that are 
+#     not visible from the current camera position.
 
-        # rotate cube face vertices
-        faceVertices = [vertices[i] for i in face]
-        rotatedVertices = [combinedRotationMatrix.dot(np.append(v, 1))[:3] for v in faceVertices]
+#     :param: rotationAngle: the angle through which vertices are rotated
+#     """
+#     glBegin(GL_QUADS)
+#     # set up rotation and perspective matrices
+#     # note that we combine the rotation matrices such that on each frame
+#     # we rotate first in the x direction, then y, then z
+#     rotationMatrixY = generateRotationMatrixY(rotationAngle)
+#     rotationMatrixX = generateRotationMatrixX(rotationAngle)
+#     rotationMatrixZ = generateRotationMatrixZ(rotationAngle)
+#     combinedRotationMatrix = rotationMatrixX.dot(rotationMatrixY).dot(rotationMatrixZ)
+#     perspectiveMatrix = generatePerspectiveMatrix(np.radians(45), 4/3, 0.1, 50.0)
 
-        # compute the face center by averaging rotated vertices
-        faceCenter = np.mean(rotatedVertices, axis=0)
-        faceCenter[2] -= 5 # move cube back along the z-axis
+#     for face, normal in zip(faces, faceNormals):
+#         # rotate the normal
+#         rNormal = combinedRotationMatrix.dot(normal + [0])[:3]
 
-        # check if face is visible
-        if (isFaceVisible(rNormal, faceCenter)):
-            # handle lighting for visible faces
-            lightingIntensity = computeLighting(rNormal, faceCenter)
+#         # rotate cube face vertices
+#         faceVertices = [vertices[i] for i in face]
+#         rotatedVertices = [combinedRotationMatrix.dot(np.append(v, 1))[:3] for v in faceVertices]
 
-            color = lightingIntensity # scale color brightness with intensity
-            glColor3f(color, color, color)
+#         # compute the face center by averaging rotated vertices
+#         faceCenter = np.mean(rotatedVertices, axis=0)
+#         faceCenter[2] -= 5 # move cube back along the z-axis
 
-            # project vertices only if the face is visible
-            for i in range(len(face)):
-                # get edge vertices
-                rVertex1 = np.append(rotatedVertices[i], 1)
-                rVertex2 = np.append(rotatedVertices[(i + 1) % 4], 1)
+#         # check if face is visible
+#         if (isFaceVisible(rNormal, faceCenter)):
+#             # handle lighting for visible faces
+#             lightingIntensity = computeLighting(rNormal, faceCenter)
 
-                # translate rotated vertices the same amount as faceCenter
-                rVertex1[2] -= 5
-                rVertex2[2] -= 5
+#             color = lightingIntensity # scale color brightness with intensity
+#             glColor3f(color, color, color)
 
-                """
-                !!! Note !!! 
-                The values faceCenter[2], rVertex1[2] and rVertex2[2]
-                need to be equal or else there is a slight mismatch between
-                vertices and normal, leading to janky visible --> invisible
-                edge transitions as objects rotate / move
-                """
+#             # project vertices only if the face is visible
+#             for i in range(len(face)):
+#                 # get edge vertices
+#                 rVertex1 = np.append(rotatedVertices[i], 1)
+#                 rVertex2 = np.append(rotatedVertices[(i + 1) % 4], 1)
 
-                # apply perspective projection matrix
-                projectedVertex1 = perspectiveMatrix.dot(rVertex1)
-                projectedVertex2 = perspectiveMatrix.dot(rVertex2)
+#                 # translate rotated vertices the same amount as faceCenter
+#                 rVertex1[2] -= 5
+#                 rVertex2[2] -= 5
 
-                # apply perspective division
-                projectedVertex1 /= projectedVertex1[3]
-                projectedVertex2 /= projectedVertex2[3]
+#                 """
+#                 !!! Note !!! 
+#                 The values faceCenter[2], rVertex1[2] and rVertex2[2]
+#                 need to be equal or else there is a slight mismatch between
+#                 vertices and normal, leading to janky visible --> invisible
+#                 edge transitions as objects rotate / move
+#                 """
 
-                # draw edges of visible faces
-                glVertex3f(*projectedVertex1[:3])
-                glVertex3f(*projectedVertex2[:3])
-    glEnd()
+#                 # apply perspective projection matrix
+#                 projectedVertex1 = perspectiveMatrix.dot(rVertex1)
+#                 projectedVertex2 = perspectiveMatrix.dot(rVertex2)
+
+#                 # apply perspective division
+#                 projectedVertex1 /= projectedVertex1[3]
+#                 projectedVertex2 /= projectedVertex2[3]
+
+#                 # draw edges of visible faces
+#                 glVertex3f(*projectedVertex1[:3])
+#                 glVertex3f(*projectedVertex2[:3])
+#     glEnd()
 
 def drawObject(vertices: List[List[float]], faces: List[List[int]], 
                normals: List[List[float]], 
@@ -266,53 +290,93 @@ def drawObject(vertices: List[List[float]], faces: List[List[int]],
     # set up rotation matrices
     angleX, angleY, angleZ = rotationAngles
     rotationMatrixY = generateRotationMatrixY(angleX)
-    rotationMatrixX = generateRotationMatrixX(angleY)
-    rotationMatrixZ = generateRotationMatrixZ(angleZ)
+    rotationMatrixX = generateRotationMatrixX(angleY / 3)
+    rotationMatrixZ = generateRotationMatrixZ(angleZ / 2)
     combinedRoMatrix = rotationMatrixX.dot(rotationMatrixY).dot(rotationMatrixZ)
 
     # generate perspective projection matrix
     perspectiveMatrix = generatePerspectiveMatrix(np.radians(45), 4/3, 0.1, 50.0)
 
     # begin object feature prep and draw
-    glBegin(GL_QUADS)
+    glBegin(GL_TRIANGLES)
     for face, normal in zip(faces, normals):
         # get and rotate face vertices, also rotate face normal vector
         # Note: face lines in .obj files provide indices for the vertices 
         # array that map to vertices that make up that given face
         faceVertices = [vertices[i] for i in face]
         rotatedFaceVertices = [combinedRoMatrix.dot(np.append(v, 1))[:3] for v in faceVertices]
-        rotatedNormal = combinedRoMatrix.dot(normal + [0])[:3]
+        rotatedNormal = combinedRoMatrix.dot(np.append(normal, 0))[:3]
 
         # compute center of face
         faceCenter = np.mean(rotatedFaceVertices, axis=0)
         faceCenter[2] -= 5
 
         # check if face is visible, only draw if it is
-        if (isFaceVisible(rotatedNormal, faceCenter)):
+        if (isFaceVisibleFix(rotatedNormal)):
             # handle lighting for visible faces
-            lightingIntensity = computeLighting(rotatedNormal, faceCenter)
+            lightingIntensity = computeLightingFix(rotatedNormal)
             color = lightingIntensity # scale color brightness with intensity
             glColor3f(color, color, color)
 
             for i in range(len(face)):
-                rVertex1 = np.append(rotatedFaceVertices[i], 1)
-                rVertex2 = np.append(rotatedFaceVertices[(i + 1) % len(face)], 1)
+                rVertex = np.append(rotatedFaceVertices[i], 1)
 
-                # # translate rotated vertices the same amount as faceCenter
-                rVertex1[2] -= 5
-                rVertex2[2] -= 5
+                # translate rotated vertices the same amount as faceCenter
+                rVertex[2] -= 5
 
                 # apply perspective projection
-                projectedVertex1 = perspectiveMatrix.dot(rVertex1)
-                projectedVertex2 = perspectiveMatrix.dot(rVertex2)
+                projectedVertex = perspectiveMatrix.dot(rVertex)
 
                 # apply perspective division
-                projectedVertex1 /= projectedVertex1[3]
-                projectedVertex2 /= projectedVertex2[3]
+                projectedVertex /= projectedVertex[3]
 
                 # draw edges of visible faces
-                glVertex3f(*projectedVertex1[:3])
-                glVertex3f(*projectedVertex2[:3])
+                glVertex3f(*projectedVertex[:3])
+    glEnd()
+
+def drawObjectFix(vertices: List[List[float]], faces: List[List[int]], 
+               rotationAngles: Tuple[float, float, float]) -> None:
+    """
+    Draw a loaded OBJ model with lighting and perspective projection, computing
+    normals and visibility for each triangle separately.
+    """
+    # Set up rotation matrices
+    angleX, angleY, angleZ = rotationAngles
+    rotationMatrixX = generateRotationMatrixX(angleX)
+    rotationMatrixY = generateRotationMatrixY(angleY / 2)
+    rotationMatrixZ = generateRotationMatrixZ(angleZ / 3)
+    combinedRoMatrix = rotationMatrixX.dot(rotationMatrixY).dot(rotationMatrixZ)
+
+    # Generate perspective projection matrix
+    perspectiveMatrix = generatePerspectiveMatrix(np.radians(45), 4/3, 0.1, 50.0)
+
+    glBegin(GL_TRIANGLES)
+    for face in faces:
+        # Get the vertices for the current triangle
+        v0, v1, v2 = [vertices[i] for i in face]
+        v0_rot = combinedRoMatrix.dot(np.append(v0, 1))[:3]
+        v1_rot = combinedRoMatrix.dot(np.append(v1, 1))[:3]
+        v2_rot = combinedRoMatrix.dot(np.append(v2, 1))[:3]
+
+        # Compute the normal for this triangle
+        normal = computeNormal(v0_rot, v1_rot, v2_rot)
+
+        # Check if the triangle is visible
+        if isFaceVisibleFix(normal):
+            # Compute lighting for this triangle
+            lightingIntensity = computeLightingFix(normal)
+            color = lightingIntensity
+            glColor3f(color, color, color)
+
+            # Project and draw each vertex
+            for v in [v0_rot, v1_rot, v2_rot]:
+                # Apply perspective projection
+                rVertex = np.append(v, 1)
+                rVertex[2] -= 10
+                projectedVertex = perspectiveMatrix.dot(rVertex)
+                projectedVertex /= projectedVertex[3]
+                
+                glVertex3f(*projectedVertex[:3])
     glEnd()
 
 def main():
@@ -337,14 +401,19 @@ def main():
 
     # load object file
     # TODO: accept file paths from the user
-    vertices, normals, faces = loadObjectFile("object-files/cube.obj")
-    if (not vertices or not normals or not faces):
+    vertices, normals, faces = loadObjectFile("object-files/ship.obj")
+    if (not vertices or not faces):
         print("Exiting...")
         return 1
 
     # enable depth testing
-    # glEnable(GL_DEPTH_TEST)
-    # glDepthFunc(GL_LESS)
+    glEnable(GL_DEPTH_TEST)
+    glDepthFunc(GL_LESS)
+
+    # print("Vertices:", vertices)
+    # print("Normals:", normals)
+    # print("Faces:", faces)
+
 
     # begin rendering loop
     running = True
@@ -358,7 +427,7 @@ def main():
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
         # drawCube(rotationAngle)
-        drawObject(vertices, faces, normals, (rotationAngle, rotationAngle, rotationAngle))
+        drawObjectFix(vertices, faces, (rotationAngle, rotationAngle, rotationAngle))
         pygame.display.flip()
 
         clock.tick(60) # cap framerate
