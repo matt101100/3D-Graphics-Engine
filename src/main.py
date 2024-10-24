@@ -38,14 +38,21 @@ def loadObjectFile(filename: str) -> Tuple[List[List[float]],
                     normals.append(temp)
 
                 elif (words[0] == "f"):
-                    # parse face lines
-                    face = []
+                    # parse face lines -- get indices corresponding to vertices
+                    # and normals for this face
+                    faceVertexIndices = []
+                    faceNormalIndices = []
                     for s in words[1:]:
-                        # each line has form vertex/texture/normal or vertex//normal
+                        # each lien has form vertex/texture/normal or vertex//normal
                         indices = s.split('/')
-                        vertexIndex = int(indices[0]) - 1 # convert to 0-indexing
-                        face.append(vertexIndex)
-                    faces.append(face)
+                        vertexIdx = int(indices[0]) - 1 # convert to 0-indexing
+                        faceVertexIndices.append(vertexIdx)
+                        if (len(indices) > 2 and indices[2]):
+                            # line specifies normals as well
+                            normalIdx = int(indices[2]) - 1
+                            faceNormalIndices.append(normalIdx)
+                    
+                    faces.append((faceVertexIndices, faceNormalIndices))
                     
     except FileNotFoundError:
         print("Error: Invalid file path provided.")
@@ -146,7 +153,7 @@ def isFaceVisible(faceNormal: List[float], cameraDirection=[0, 0, 1]):
     dotProduct = np.dot(faceNormal, cameraDirection)
     return dotProduct > 0 # only true when face is visible
 
-def computeNormal(v0: List[float], v1: List[float], v2: List[float]):
+def computeNormal(v0: List[float], v1: List[float], v2: List[float]) -> List[float]:
     """
     Compute the normal for a triangle given its three vertices.
 
@@ -157,8 +164,8 @@ def computeNormal(v0: List[float], v1: List[float], v2: List[float]):
     """
     edge1 = np.array(v1) - np.array(v0)
     edge2 = np.array(v2) - np.array(v0)
-    normal = np.cross(edge1, edge2)
-    normal /= np.linalg.norm(normal)  # Normalize the normal vector
+    normal = np.cross(edge1, edge2) # cross product to compute orthogonal vecs
+    normal /= np.linalg.norm(normal)  # normalize the normal vector
     return normal
 
 def drawObject(vertices: List[List[float]], faces: List[List[int]], 
@@ -185,15 +192,23 @@ def drawObject(vertices: List[List[float]], faces: List[List[int]],
 
     # begin render
     glBegin(GL_TRIANGLES)
-    for face in faces:
+    for face, normalIndices in faces:
         # get the vertices for the current triangle
         v0, v1, v2 = [vertices[i] for i in face]
-        v0_rot = combinedRoMatrix.dot(np.append(v0, 1))[:3]
-        v1_rot = combinedRoMatrix.dot(np.append(v1, 1))[:3]
-        v2_rot = combinedRoMatrix.dot(np.append(v2, 1))[:3]
+        rv0 = combinedRoMatrix.dot(np.append(v0, 1))[:3]
+        rv1 = combinedRoMatrix.dot(np.append(v1, 1))[:3]
+        rv2 = combinedRoMatrix.dot(np.append(v2, 1))[:3]
 
-        # compute the normal for this triangle
-        normal = computeNormal(v0_rot, v1_rot, v2_rot)
+        if (normalIndices):
+            # use normals provided in the .obj file
+            n0, n1, n2 = [normals[i] for i in normalIndices]
+            rn0 = combinedRoMatrix.dot(np.append(n0, 1))[:3]
+            rn1 = combinedRoMatrix.dot(np.append(n1, 1))[:3]
+            rn2 = combinedRoMatrix.dot(np.append(n2, 1))[:3]
+            normal = np.mean([rn0, rn1, rn2], axis=0)
+        else:
+            # compute the normal for this triangle if not supplied in the .obj
+            normal = computeNormal(rv0, rv1, rv2)
 
         # check if the triangle is visible
         if isFaceVisible(normal):
@@ -203,7 +218,7 @@ def drawObject(vertices: List[List[float]], faces: List[List[int]],
             glColor3f(color, color, color)
 
             # project and draw each vertex
-            for v in [v0_rot, v1_rot, v2_rot]:
+            for v in [rv0, rv1, rv2]:
                 # apply perspective projection
                 rVertex = np.append(v, 1)
                 rVertex[2] -= 10
