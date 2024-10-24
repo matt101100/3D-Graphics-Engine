@@ -161,7 +161,7 @@ def computeNormal(v0: List[float], v1: List[float], v2: List[float]):
     normal /= np.linalg.norm(normal)  # Normalize the normal vector
     return normal
 
-def drawObjectFix(vertices: List[List[float]], faces: List[List[int]], 
+def drawObject(vertices: List[List[float]], faces: List[List[int]], 
                normals: List[List[float]], 
                rotationAngles: Tuple[float, float, float]) -> None:
     """
@@ -262,7 +262,7 @@ def main():
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
         # drawCube(rotationAngle)
-        drawObjectFix(vertices, faces, normals, (rotationAngle, rotationAngle, rotationAngle))
+        drawObject(vertices, faces, normals, (rotationAngle, rotationAngle, rotationAngle))
         pygame.display.flip()
 
         clock.tick(60) # cap framerate
