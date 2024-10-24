@@ -401,12 +401,18 @@ def main():
 
     # load object file
     # TODO: accept file paths from the user
-    vertices, normals, faces = loadObjectFile("object-files/ship.obj")
-    if (not vertices or not faces):
+    vertices, normals, faces = loadObjectFile("object-files/cube-test-tris.obj")
+    if (vertices == None and normals == None and faces == None):
+        # invalid filepath end point
+        print("Exiting...")
+        return 1
+    elif (len(vertices) == 0 or len(faces) == 0):
+        # invalid file contents end point
+        print("Invalid .obj file defines no vertices or faces.")
         print("Exiting...")
         return 1
 
-    # enable depth testing
+    # enable depth testing --> possible implement this myself: depth buffering or painter's algo
     glEnable(GL_DEPTH_TEST)
     glDepthFunc(GL_LESS)
 
