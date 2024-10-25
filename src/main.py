@@ -53,7 +53,7 @@ def loadObjectFile(filename: str) -> Tuple[List[List[float]], List[List[float]],
 
                 elif (words[0] == "f"):
                     # parse face lines -- get indices corresponding to vertices
-                    # and normals for this face
+                    # normals and textures for this face
                     faceVertexIndices = []
                     faceNormalIndices = []
                     faceTextureIndices = []
