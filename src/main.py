@@ -1,47 +1,91 @@
 import pygame
 from pygame.locals import *
 from OpenGL.GL import *
+from PIL import Image
 import numpy as np
 import math
 from typing import List, Tuple
 
-# define cube vertices, faces and normals
-vertices = [
-    [-1, -1, -1], # vertex 0
-    [1, -1, -1],  # vertex 1
-    [1, 1, -1],   # vertex 2
-    [-1, 1, -1],  # vertex 3
-    [-1, -1, 1],  # vertex 4
-    [1, -1, 1],   # vertex 5
-    [1, 1, 1],    # vertex 6
-    [-1, 1, 1]    # vertex 7
-]
-
-faces = [
-    (0, 1, 2, 3), # front
-    (4, 5, 6, 7), # back
-    (0, 3, 7, 4), # left
-    (1, 2, 6, 5), # right
-    (0, 1, 5, 4), # bottom
-    (3, 2, 6, 7)  # top
-]
-
-faceNormals = [
-    [0, 0, -1],  # front
-    [0, 0, 1],   # back
-    [-1, 0, 0],  # left
-    [1, 0, 0],   # right
-    [0, -1, 0],  # bottom
-    [0, 1, 0]    # top
-]
-
-def loadObjectFile(filename: str):
+def loadObjectFile(filename: str) -> Tuple[List[List[float]], List[List[float]], 
+                                           List[Tuple[List[int], List[int], List[int]]], 
+                                           List[List[float]]]:
     """
-    Load an OBJ file and return vertices, normals, and faces.
+    Load an OBJ file and return vertices, normals, faces and texture coordinates.
 
     :param filename: path to the .obj file
-    :return: tuple containing lists of vertices, normals, and faces
+    :return: tuple containing lists of vertices, normals, faces, and 
+             texture coordinates.
+             Faces are returned as a tuple of vertex indices, normal indices, 
+             and texture indices.
     """
+    vertices = []
+    normals = []
+    faces = []
+    textureCoords = []
+
+    try:
+        with open(filename, 'r') as f:
+            for line in f:
+                words = line.split()
+                if (len(words) == 0):
+                    continue
+
+                if (words[0] == "v"):
+                    # parse vertex lines
+                    temp = []
+                    for s in words[1:4]:
+                        temp.append(float(s))
+                    vertices.append(temp)
+
+                elif (words[0] == "vn"):
+                    # parse normal lines
+                    temp = []
+                    for s in words[1:4]:
+                        temp.append(float(s))
+                    normals.append(temp)
+                
+                elif (words[0] == "vt"):
+                    # parse texture coordinate lines
+                    temp = []
+                    for s in words[1:3]:
+                        temp.append(float(s))
+                    textureCoords.append(temp)
+
+                elif (words[0] == "f"):
+                    # parse face lines -- get indices corresponding to vertices
+                    # normals and textures for this face
+                    faceVertexIndices = []
+                    faceNormalIndices = []
+                    faceTextureIndices = []
+                    for s in words[1:]:
+                        # each line has form vertex/texture/normal or vertex//normal
+                        indices = s.split('/')
+                        vertexIdx = int(indices[0]) - 1 # convert to 0-indexing
+                        faceVertexIndices.append(vertexIdx)
+
+                        # texture indices
+                        if (len(indices) > 1 and indices[1]):
+                            texIdx = int(indices[1]) - 1
+                            faceTextureIndices.append(texIdx)
+
+                        # normal indices
+                        if (len(indices) > 2 and indices[2]):
+                            # line specifies normals as well
+                            normalIdx = int(indices[2]) - 1
+                            faceNormalIndices.append(normalIdx)
+                    
+                    faces.append((faceVertexIndices, faceNormalIndices,
+                                   faceTextureIndices))
+                 
+    except FileNotFoundError:
+        print("Error: Invalid file path provided.")
+        return None, None, None, None
+    
+    return vertices, normals, faces, textureCoords
+
+
+def loadTexture(imagePath: str) -> int:
+    # TODO: implement texture file loading from png or jpeg formats
     pass
 
 def generatePerspectiveMatrix(fov: float, aspect: float, near: float, 
@@ -74,8 +118,8 @@ def generateRotationMatrixX(angle: float) -> np.ndarray:
     """
     return np.array([
         [1, 0, 0, 0],
-        [0, math.cos(angle / 2), math.sin(angle / 2), 0],
-        [0, -math.sin(angle / 2), math.cos(angle / 2), 0],
+        [0, math.cos(angle), math.sin(angle), 0],
+        [0, -math.sin(angle), math.cos(angle), 0],
         [0, 0, 0, 1]
     ])
 
@@ -101,134 +145,122 @@ def generateRotationMatrixZ(angle: float) -> np.ndarray:
     :return: numpy 4x4 rotation matrix
     """
     return np.array([
-        [math.cos(angle / 3), math.sin(angle / 3), 0, 0],
-        [-math.sin(angle / 3), math.cos(angle / 3), 0 ,0],
+        [math.cos(angle), math.sin(angle), 0, 0],
+        [-math.sin(angle), math.cos(angle), 0 ,0],
         [0, 0, 1, 0],
         [0, 0, 0, 1]
     ])
 
-def computeLighting(faceNormal: List[float], faceCenter: np.ndarray) -> float:
+def computeLighting(faceNormal: List[float]) -> float:
     """
     Calculates intensity of lighting based on face normal and light direction.
 
     :param faceNormal: 1x3 normal given as a list of floats
-    :param faceCenter: center coordinates of face with corresponding faceNormal
     :return: dot product between the light direction vector and faceNormal
              defaults to zero in cases where the dot product is negative
              as incoming light cannot be negative
     """
-    # light comes from the camera at (0, 0, 0)
-    lightDirection = -np.array(faceCenter)
+    # assume light comes from the camera along the z-axis
+    lightDirection = np.array([0, 0, 1])
     lightDirection = lightDirection / np.linalg.norm(lightDirection)
     dotProduct = np.dot(faceNormal, lightDirection)
     return max(dotProduct, 0) # clamp to 0 for normals facing away
 
-def isFaceVisible(faceNormal: List[int], faceCenter: List[int],
-                  cameraPos=[0, 0, 0]) -> bool:
+def isFaceVisible(faceNormal: List[float], cameraDirection=[0, 0, 1]):
     """
     Returns a bool based on whether a face with faceNormal can be seen from
-    the current camera position to the faceCenter. Uses the dot product between
-    the camera and face normal to compute how much the normal projects onto the
+    the current camera position. Uses the dot product between the camera and 
+    face normal to compute how much the normal projects onto the
     view direction vector. Values greater than 0 mean that the face is visible.
 
     :param faceNormal: 1x3 normal vector given as a list of floats
-    :param faceCenter: center coordinates of face with corresponding faceNormal
-    :param cameraPos: position of the viewer / camera, defaults to (0, 0, 0)
-    :return: a bool representing whether the face with given normal and center
-             coordinates is visible from the camera at cameraPos
+    :param cameraDirection: direction the camera faces, defaults to (0, 0, 0)
+    :return: a bool representing whether the face with given normal is visible 
+             from the camera at cameraPos
     """
-    viewDirection = cameraPos - np.array(faceCenter)
-    dotProduct = np.dot(faceNormal, viewDirection)
-    return dotProduct > 0 # only True when face is visible
+    dotProduct = np.dot(faceNormal, cameraDirection)
+    return dotProduct > 0 # only true when face is visible
 
-def drawCube(rotationAngle: float) -> None:
+def computeNormal(v0: List[float], v1: List[float], v2: List[float]) -> List[float]:
     """
-    Draws a solid cube to the screen with lighting.
-    Computes position of each vertex after rotation and translation into 
-    the z-axis and uses back-face culling to hide faces that are 
-    not visible from the current camera position.
+    Compute the normal for a triangle given its three vertices.
 
-    :param: rotationAngle: the angle through which vertices are rotated
+    :param v0: first vertex of the triangle
+    :param v1: second vertex of the triangle
+    :param v2: third vertex of the triangle
+    :return: normal vector of the triangle
     """
-    glBegin(GL_QUADS)
-    # set up rotation and perspective matrices
-    # note that we combine the rotation matrices such that on each frame
-    # we rotate first in the x direction, then y, then z
-    rotationMatrixY = generateRotationMatrixY(rotationAngle)
-    rotationMatrixX = generateRotationMatrixX(rotationAngle)
-    rotationMatrixZ = generateRotationMatrixZ(rotationAngle)
-    combinedRotationMatrix = rotationMatrixX.dot(rotationMatrixY).dot(rotationMatrixZ)
-    perspectiveMatrix = generatePerspectiveMatrix(np.radians(45), 4/3, 0.1, 50.0)
-
-    for face, normal in zip(faces, faceNormals):
-        # rotate the normal
-        rNormal = combinedRotationMatrix.dot(normal + [0])[:3]
-
-        # rotate cube face vertices
-        faceVertices = [vertices[i] for i in face]
-        rotatedVertices = [combinedRotationMatrix.dot(np.append(v, 1))[:3] for v in faceVertices]
-
-        # compute the face center by averaging rotated vertices
-        faceCenter = np.mean(rotatedVertices, axis=0)
-        faceCenter[2] -= 5 # move cube back along the z-axis
-
-        # check if face is visible
-        if (isFaceVisible(rNormal, faceCenter)):
-            # handle lighting for visible faces
-            lightingIntensity = computeLighting(rNormal, faceCenter)
-
-            color = lightingIntensity # scale color brightness with intensity
-            glColor3f(color, color, color)
-
-            # project vertices only if the face is visible
-            for i in range(len(face)):
-                # get edge vertices
-                rVertex1 = np.append(rotatedVertices[i], 1)
-                rVertex2 = np.append(rotatedVertices[(i + 1) % 4], 1)
-
-                # translate rotated vertices the same amount as faceCenter
-                rVertex1[2] -= 5
-                rVertex2[2] -= 5
-
-                """
-                !!! Note !!! 
-                The values faceCenter[2], rVertex1[2] and rVertex2[2]
-                need to be equal or else there is a slight mismatch between
-                vertices and normal, leading to janky visible --> invisible
-                edge transitions as objects rotate / move
-                """
-
-                # apply perspective projection matrix
-                projectedVertex1 = perspectiveMatrix.dot(rVertex1)
-                projectedVertex2 = perspectiveMatrix.dot(rVertex2)
-
-                # apply perspective division
-                projectedVertex1 /= projectedVertex1[3]
-                projectedVertex2 /= projectedVertex2[3]
-
-                # draw edges of visible faces
-                glVertex3f(*projectedVertex1[:3])
-                glVertex3f(*projectedVertex2[:3])
-    glEnd()
+    edge1 = np.array(v1) - np.array(v0)
+    edge2 = np.array(v2) - np.array(v0)
+    normal = np.cross(edge1, edge2) # cross product to compute orthogonal vecs
+    normal /= np.linalg.norm(normal)  # normalize the normal vector
+    return normal
 
 def drawObject(vertices: List[List[float]], faces: List[List[int]], 
                normals: List[List[float]], 
                rotationAngles: Tuple[float, float, float]) -> None:
     """
-    Draw a loaded OBJ model with lighting and perspective projection.
+    Draw a loaded OBJ model with lighting and perspective projection, computing
+    normals and visibility for each triangle separately.
 
     :param vertices: list of vertex positions
     :param faces: list of faces (vertex indices)
-    :param normals: list of normals
+    :param normals: list of normals (not currently used by the function)
     :param rotationAngles: tuple of rotation angles (x, y, z)
     """
-    pass
+    # set up rotation matrices
+    angleX, angleY, angleZ = rotationAngles
+    rotationMatrixX = generateRotationMatrixX(angleX)
+    rotationMatrixY = generateRotationMatrixY(angleY / 2)
+    rotationMatrixZ = generateRotationMatrixZ(angleZ / 3)
+    combinedRoMatrix = rotationMatrixX.dot(rotationMatrixY).dot(rotationMatrixZ)
+
+    # generate perspective projection matrix
+    perspectiveMatrix = generatePerspectiveMatrix(np.radians(45), 4/3, 0.1, 50.0)
+
+    # begin render
+    glBegin(GL_TRIANGLES)
+    for face, normalIndices, textureIndices in faces:
+        # get the vertices for the current triangle
+        v0, v1, v2 = [vertices[i] for i in face]
+        rv0 = combinedRoMatrix.dot(np.append(v0, 1))[:3]
+        rv1 = combinedRoMatrix.dot(np.append(v1, 1))[:3]
+        rv2 = combinedRoMatrix.dot(np.append(v2, 1))[:3]
+
+        if (normalIndices):
+            # use normals provided in the .obj file
+            n0, n1, n2 = [normals[i] for i in normalIndices]
+            rn0 = combinedRoMatrix.dot(np.append(n0, 1))[:3]
+            rn1 = combinedRoMatrix.dot(np.append(n1, 1))[:3]
+            rn2 = combinedRoMatrix.dot(np.append(n2, 1))[:3]
+            normal = np.mean([rn0, rn1, rn2], axis=0)
+        else:
+            # compute the normal for this triangle if not supplied in the .obj
+            normal = computeNormal(rv0, rv1, rv2)
+
+        # check if the triangle is visible
+        if isFaceVisible(normal):
+            # compute lighting for this triangle
+            lightingIntensity = computeLighting(normal)
+            color = lightingIntensity
+            glColor3f(color, color, color)
+
+            # project and draw each vertex
+            for v in [rv0, rv1, rv2]:
+                # apply perspective projection
+                rVertex = np.append(v, 1)
+                rVertex[2] -= 10
+                projectedVertex = perspectiveMatrix.dot(rVertex)
+                projectedVertex /= projectedVertex[3]
+                
+                glVertex3f(*projectedVertex[:3])
+    glEnd()
 
 def main():
     """
     Initialises Pygame modules, setting up frameworks for graphics and event
     handling. Sets up display window for rendering with the given display,
-    OpenGL and double buffering.
+    OpenGL and double buffering. Loads object file.
 
     Rendering loop calls functions to display objects and Pygame handles user
     events, specifically when quit conditions are met, such as by pressing
@@ -244,6 +276,26 @@ def main():
     clock = pygame.time.Clock()
     rotationAngle = 0
 
+    # load object file
+    # TODO: accept file paths from the user
+    vertices, normals, faces, texCoords = loadObjectFile("objects/cube.obj")
+    if (vertices == None and normals == None and faces == None 
+        and texCoords == None):
+        # invalid filepath end point
+        print("Exiting...")
+        return 1
+    elif (len(vertices) == 0 or len(faces) == 0):
+        # invalid file contents end point
+        print("Invalid .obj file defines no vertices or faces.")
+        print("Exiting...")
+        return 1
+    
+    print(texCoords)
+
+    # enable depth testing --> possibly implement this myself: depth buffering or painter's algo
+    glEnable(GL_DEPTH_TEST)
+    glDepthFunc(GL_LESS)
+
     # begin rendering loop
     running = True
     while (running):
@@ -255,7 +307,8 @@ def main():
         rotationAngle = (rotationAngle + 0.02) % (6 * math.pi)
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
-        drawCube(rotationAngle)
+        # drawCube(rotationAngle)
+        drawObject(vertices, faces, normals, (rotationAngle, rotationAngle, rotationAngle))
         pygame.display.flip()
 
         clock.tick(60) # cap framerate
