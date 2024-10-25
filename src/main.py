@@ -278,7 +278,7 @@ def main():
 
     # load object file
     # TODO: accept file paths from the user
-    vertices, normals, faces, texCoords = loadObjectFile("objects/cube.obj")
+    vertices, normals, faces, texCoords = loadObjectFile("objects/ship.obj")
     if (vertices == None and normals == None and faces == None 
         and texCoords == None):
         # invalid filepath end point
@@ -289,8 +289,6 @@ def main():
         print("Invalid .obj file defines no vertices or faces.")
         print("Exiting...")
         return 1
-    
-    print(texCoords)
 
     # enable depth testing --> possibly implement this myself: depth buffering or painter's algo
     glEnable(GL_DEPTH_TEST)
@@ -314,8 +312,6 @@ def main():
         clock.tick(60) # cap framerate
 
     pygame.quit()
-
-    # irrelevant comment to practice merge conflicts
 
 if __name__ == "__main__":
     main()
