@@ -262,5 +262,7 @@ def main():
 
     pygame.quit()
 
+    # irrelevant comment to practice merge conflicts
+
 if __name__ == "__main__":
     main()
