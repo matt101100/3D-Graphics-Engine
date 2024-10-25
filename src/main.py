@@ -1,21 +1,28 @@
 import pygame
 from pygame.locals import *
 from OpenGL.GL import *
+from PIL import Image
 import numpy as np
 import math
 from typing import List, Tuple
 
-def loadObjectFile(filename: str) -> Tuple[List[List[float]], 
-                                           List[List[float]], List[List[int]]]:
+def loadObjectFile(filename: str) -> Tuple[List[List[float]], List[List[float]], 
+                                           List[Tuple[List[int], List[int], List[int]]], 
+                                           List[List[float]]]:
     """
-    Load an OBJ file and return vertices, normals, and faces.
+    Load an OBJ file and return vertices, normals, faces and texture coordinates.
 
     :param filename: path to the .obj file
-    :return: tuple containing lists of vertices, normals, and faces
+    :return: tuple containing lists of vertices, normals, faces, and 
+             texture coordinates.
+             Faces are returned as a tuple of vertex indices, normal indices, 
+             and texture indices.
     """
     vertices = []
     normals = []
     faces = []
+    textureCoords = []
+
     try:
         with open(filename, 'r') as f:
             for line in f:
@@ -36,29 +43,50 @@ def loadObjectFile(filename: str) -> Tuple[List[List[float]],
                     for s in words[1:4]:
                         temp.append(float(s))
                     normals.append(temp)
+                
+                elif (words[0] == "vt"):
+                    # parse texture coordinate lines
+                    temp = []
+                    for s in words[1:3]:
+                        temp.append(float(s))
+                    textureCoords.append(temp)
 
                 elif (words[0] == "f"):
                     # parse face lines -- get indices corresponding to vertices
                     # and normals for this face
                     faceVertexIndices = []
                     faceNormalIndices = []
+                    faceTextureIndices = []
                     for s in words[1:]:
-                        # each lien has form vertex/texture/normal or vertex//normal
+                        # each line has form vertex/texture/normal or vertex//normal
                         indices = s.split('/')
                         vertexIdx = int(indices[0]) - 1 # convert to 0-indexing
                         faceVertexIndices.append(vertexIdx)
+
+                        # texture indices
+                        if (len(indices) > 1 and indices[1]):
+                            texIdx = int(indices[1]) - 1
+                            faceTextureIndices.append(texIdx)
+
+                        # normal indices
                         if (len(indices) > 2 and indices[2]):
                             # line specifies normals as well
                             normalIdx = int(indices[2]) - 1
                             faceNormalIndices.append(normalIdx)
                     
-                    faces.append((faceVertexIndices, faceNormalIndices))
-                    
+                    faces.append((faceVertexIndices, faceNormalIndices,
+                                   faceTextureIndices))
+                 
     except FileNotFoundError:
         print("Error: Invalid file path provided.")
-        return None, None, None
+        return None, None, None, None
     
-    return vertices, normals, faces
+    return vertices, normals, faces, textureCoords
+
+
+def loadTexture(imagePath: str) -> int:
+    # TODO: implement texture file loading from png or jpeg formats
+    pass
 
 def generatePerspectiveMatrix(fov: float, aspect: float, near: float, 
                               far: float) -> np.ndarray:
@@ -192,7 +220,7 @@ def drawObject(vertices: List[List[float]], faces: List[List[int]],
 
     # begin render
     glBegin(GL_TRIANGLES)
-    for face, normalIndices in faces:
+    for face, normalIndices, textureIndices in faces:
         # get the vertices for the current triangle
         v0, v1, v2 = [vertices[i] for i in face]
         rv0 = combinedRoMatrix.dot(np.append(v0, 1))[:3]
@@ -250,8 +278,9 @@ def main():
 
     # load object file
     # TODO: accept file paths from the user
-    vertices, normals, faces = loadObjectFile("objects/cube.obj")
-    if (vertices == None and normals == None and faces == None):
+    vertices, normals, faces, texCoords = loadObjectFile("objects/cube.obj")
+    if (vertices == None and normals == None and faces == None 
+        and texCoords == None):
         # invalid filepath end point
         print("Exiting...")
         return 1
@@ -260,6 +289,8 @@ def main():
         print("Invalid .obj file defines no vertices or faces.")
         print("Exiting...")
         return 1
+    
+    print(texCoords)
 
     # enable depth testing --> possibly implement this myself: depth buffering or painter's algo
     glEnable(GL_DEPTH_TEST)
