@@ -86,6 +86,7 @@ def loadObjectFile(filename: str) -> Tuple[List[List[float]], List[List[float]],
 
 def loadTexture(imagePath: str) -> int:
     # TODO: implement texture file loading from png or jpeg formats
+    
     pass
 
 def generatePerspectiveMatrix(fov: float, aspect: float, near: float, 
