@@ -60,7 +60,8 @@ def load_object_file(file_name: str) -> Tuple[List[List[float]],
                     face_normal_indices = []
                     face_texture_indices = []
                     for s in words[1:]:
-                        # each line has form vertex/texture/normal or vertex//normal
+                        # each line has form:
+                        # vertex/texture/normal or vertex//normal
                         indices = s.split('/')
                         vertex_idx = int(indices[0]) - 1 # convert to 0-indexing
                         face_vertex_indices.append(vertex_idx)
