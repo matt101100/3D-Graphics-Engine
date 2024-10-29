@@ -6,13 +6,15 @@ import numpy as np
 import math
 from typing import List, Tuple
 
-def loadObjectFile(filename: str) -> Tuple[List[List[float]], List[List[float]], 
-                                           List[Tuple[List[int], List[int], List[int]]], 
-                                           List[List[float]]]:
+def load_object_file(file_name: str) -> Tuple[List[List[float]],
+                                              List[List[float]],
+                                              List[Tuple[List[int], List[int], 
+                                                   List[int]]],
+                                              List[List[float]]]:
     """
     Load an OBJ file and return vertices, normals, faces and texture coordinates.
 
-    :param filename: path to the .obj file
+    :param file_name: path to the .obj file
     :return: tuple containing lists of vertices, normals, faces, and 
              texture coordinates.
              Faces are returned as a tuple of vertex indices, normal indices, 
@@ -21,10 +23,10 @@ def loadObjectFile(filename: str) -> Tuple[List[List[float]], List[List[float]],
     vertices = []
     normals = []
     faces = []
-    textureCoords = []
+    texture_coords = []
 
     try:
-        with open(filename, 'r') as f:
+        with open(file_name, 'r') as f:
             for line in f:
                 words = line.split()
                 if (len(words) == 0):
@@ -49,46 +51,46 @@ def loadObjectFile(filename: str) -> Tuple[List[List[float]], List[List[float]],
                     temp = []
                     for s in words[1:3]:
                         temp.append(float(s))
-                    textureCoords.append(temp)
+                    texture_coords.append(temp)
 
                 elif (words[0] == "f"):
                     # parse face lines -- get indices corresponding to vertices
                     # normals and textures for this face
-                    faceVertexIndices = []
-                    faceNormalIndices = []
-                    faceTextureIndices = []
+                    face_vertex_indices = []
+                    face_normal_indices = []
+                    face_texture_indices = []
                     for s in words[1:]:
                         # each line has form vertex/texture/normal or vertex//normal
                         indices = s.split('/')
-                        vertexIdx = int(indices[0]) - 1 # convert to 0-indexing
-                        faceVertexIndices.append(vertexIdx)
+                        vertex_idx = int(indices[0]) - 1 # convert to 0-indexing
+                        face_vertex_indices.append(vertex_idx)
 
                         # texture indices
                         if (len(indices) > 1 and indices[1]):
-                            texIdx = int(indices[1]) - 1
-                            faceTextureIndices.append(texIdx)
+                            tex_idx = int(indices[1]) - 1
+                            face_texture_indices.append(tex_idx)
 
                         # normal indices
                         if (len(indices) > 2 and indices[2]):
                             # line specifies normals as well
-                            normalIdx = int(indices[2]) - 1
-                            faceNormalIndices.append(normalIdx)
+                            normal_idx = int(indices[2]) - 1
+                            face_normal_indices.append(normal_idx)
                     
-                    faces.append((faceVertexIndices, faceNormalIndices,
-                                   faceTextureIndices))
+                    faces.append((face_vertex_indices, face_normal_indices,
+                                   face_texture_indices))
                  
     except FileNotFoundError:
         print("Error: Invalid file path provided.")
         return None, None, None, None
     
-    return vertices, normals, faces, textureCoords
+    return vertices, normals, faces, texture_coords
 
 
-def loadTexture(imagePath: str) -> int:
+def load_texture(image_path: str) -> int:
     # TODO: implement texture file loading from png or jpeg formats
     pass
 
-def generatePerspectiveMatrix(fov: float, aspect: float, near: float, 
+def generate_perspective_matrix(fov: float, aspect: float, near: float, 
                               far: float) -> np.ndarray:
     """
     Generates a perspective matrix based on the given fov, aspect ratio and
@@ -109,7 +111,7 @@ def generatePerspectiveMatrix(fov: float, aspect: float, near: float,
         [0, 0, -1, 0]
     ], dtype=np.float32)
 
-def generateRotationMatrixX(angle: float) -> np.ndarray:
+def generate_rotation_matrix_x(angle: float) -> np.ndarray:
     """
     Generates a 4x4 rotation matrix in the x direction.
 
@@ -123,7 +125,7 @@ def generateRotationMatrixX(angle: float) -> np.ndarray:
         [0, 0, 0, 1]
     ])
 
-def generateRotationMatrixY(angle: float) -> np.ndarray:
+def generate_rotation_matrix_y(angle: float) -> np.ndarray:
     """
     Generates a 4x4 rotation matrix in the y direction.
 
@@ -137,7 +139,7 @@ def generateRotationMatrixY(angle: float) -> np.ndarray:
         [0, 0, 0, 1]
     ], dtype=np.float32)
 
-def generateRotationMatrixZ(angle: float) -> np.ndarray:
+def generate_rotation_matrix_z(angle: float) -> np.ndarray:
     """
     Generates a 4x4 rotation matrix in the z direction.
 
@@ -151,37 +153,38 @@ def generateRotationMatrixZ(angle: float) -> np.ndarray:
         [0, 0, 0, 1]
     ])
 
-def computeLighting(faceNormal: List[float]) -> float:
+def compute_lighting(face_normal: List[float]) -> float:
     """
     Calculates intensity of lighting based on face normal and light direction.
 
-    :param faceNormal: 1x3 normal given as a list of floats
-    :return: dot product between the light direction vector and faceNormal
+    :param face_normal: 1x3 normal given as a list of floats
+    :return: dot product between the light direction vector and face_normal
              defaults to zero in cases where the dot product is negative
              as incoming light cannot be negative
     """
     # assume light comes from the camera along the z-axis
-    lightDirection = np.array([0, 0, 1])
-    lightDirection = lightDirection / np.linalg.norm(lightDirection)
-    dotProduct = np.dot(faceNormal, lightDirection)
-    return max(dotProduct, 0) # clamp to 0 for normals facing away
+    light_direction = np.array([0, 0, 1])
+    light_direction = light_direction / np.linalg.norm(light_direction)
+    dot_prod = np.dot(face_normal, light_direction)
+    return max(dot_prod, 0) # clamp to 0 for normals facing away
 
-def isFaceVisible(faceNormal: List[float], cameraDirection=[0, 0, 1]):
+def is_face_visible(face_normal: List[float], camera_direction=[0, 0, 1]):
     """
-    Returns a bool based on whether a face with faceNormal can be seen from
+    Returns a bool based on whether a face with face_normal can be seen from
     the current camera position. Uses the dot product between the camera and 
     face normal to compute how much the normal projects onto the
-    view direction vector. Values greater than 0 mean that the face is visible.
+    view direction vector.
 
-    :param faceNormal: 1x3 normal vector given as a list of floats
-    :param cameraDirection: direction the camera faces, defaults to (0, 0, 0)
+    :param face_normal: 1x3 normal vector given as a list of floats
+    :param camera_direction: direction the camera faces, defaults to (0, 0, 0)
     :return: a bool representing whether the face with given normal is visible 
              from the camera at cameraPos
     """
-    dotProduct = np.dot(faceNormal, cameraDirection)
-    return dotProduct > 0 # only true when face is visible
+    dot_prod = np.dot(face_normal, camera_direction)
+    return dot_prod > 0 # only true when face is visible
 
-def computeNormal(v0: List[float], v1: List[float], v2: List[float]) -> List[float]:
+def compute_normal(v0: List[float], v1: List[float],
+                   v2: List[float]) -> List[float]:
     """
     Compute the normal for a triangle given its three vertices.
 
@@ -196,9 +199,9 @@ def computeNormal(v0: List[float], v1: List[float], v2: List[float]) -> List[flo
     normal /= np.linalg.norm(normal)  # normalize the normal vector
     return normal
 
-def drawObject(vertices: List[List[float]], faces: List[List[int]], 
+def draw_object(vertices: List[List[float]], faces: List[List[int]], 
                normals: List[List[float]], 
-               rotationAngles: Tuple[float, float, float]) -> None:
+               rotation_angles: Tuple[float, float, float]) -> None:
     """
     Draw a loaded OBJ model with lighting and perspective projection, computing
     normals and visibility for each triangle separately.
@@ -206,54 +209,56 @@ def drawObject(vertices: List[List[float]], faces: List[List[int]],
     :param vertices: list of vertex positions
     :param faces: list of faces (vertex indices)
     :param normals: list of normals (not currently used by the function)
-    :param rotationAngles: tuple of rotation angles (x, y, z)
+    :param rotation_angles: tuple of rotation angles (x, y, z)
     """
     # set up rotation matrices
-    angleX, angleY, angleZ = rotationAngles
-    rotationMatrixX = generateRotationMatrixX(angleX)
-    rotationMatrixY = generateRotationMatrixY(angleY / 2)
-    rotationMatrixZ = generateRotationMatrixZ(angleZ / 3)
-    combinedRoMatrix = rotationMatrixX.dot(rotationMatrixY).dot(rotationMatrixZ)
+    angle_x, angle_y, angle_z = rotation_angles
+    rotation_matrix_x = generate_rotation_matrix_x(angle_x)
+    rotation_matrix_y = generate_rotation_matrix_y(angle_y / 2)
+    rotation_matrix_z = generate_rotation_matrix_z(angle_z / 3)
+    combined_rotation = rotation_matrix_x.dot(
+                        rotation_matrix_y).dot(rotation_matrix_z)
 
     # generate perspective projection matrix
-    perspectiveMatrix = generatePerspectiveMatrix(np.radians(45), 4/3, 0.1, 50.0)
+    perspectiveMatrix = generate_perspective_matrix(np.radians(45), 
+                                                    4/3, 0.1, 50.0)
 
     # begin render
     glBegin(GL_TRIANGLES)
-    for face, normalIndices, textureIndices in faces:
+    for face, normal_indices, texture_indices in faces:
         # get the vertices for the current triangle
         v0, v1, v2 = [vertices[i] for i in face]
-        rv0 = combinedRoMatrix.dot(np.append(v0, 1))[:3]
-        rv1 = combinedRoMatrix.dot(np.append(v1, 1))[:3]
-        rv2 = combinedRoMatrix.dot(np.append(v2, 1))[:3]
+        rv0 = combined_rotation.dot(np.append(v0, 1))[:3]
+        rv1 = combined_rotation.dot(np.append(v1, 1))[:3]
+        rv2 = combined_rotation.dot(np.append(v2, 1))[:3]
 
-        if (normalIndices):
+        if (normal_indices):
             # use normals provided in the .obj file
-            n0, n1, n2 = [normals[i] for i in normalIndices]
-            rn0 = combinedRoMatrix.dot(np.append(n0, 1))[:3]
-            rn1 = combinedRoMatrix.dot(np.append(n1, 1))[:3]
-            rn2 = combinedRoMatrix.dot(np.append(n2, 1))[:3]
+            n0, n1, n2 = [normals[i] for i in normal_indices]
+            rn0 = combined_rotation.dot(np.append(n0, 1))[:3]
+            rn1 = combined_rotation.dot(np.append(n1, 1))[:3]
+            rn2 = combined_rotation.dot(np.append(n2, 1))[:3]
             normal = np.mean([rn0, rn1, rn2], axis=0)
         else:
             # compute the normal for this triangle if not supplied in the .obj
-            normal = computeNormal(rv0, rv1, rv2)
+            normal = compute_normal(rv0, rv1, rv2)
 
         # check if the triangle is visible
-        if isFaceVisible(normal):
+        if is_face_visible(normal):
             # compute lighting for this triangle
-            lightingIntensity = computeLighting(normal)
-            color = lightingIntensity
+            lighting_intensity = compute_lighting(normal)
+            color = lighting_intensity
             glColor3f(color, color, color)
 
             # project and draw each vertex
             for v in [rv0, rv1, rv2]:
                 # apply perspective projection
-                rVertex = np.append(v, 1)
-                rVertex[2] -= 10
-                projectedVertex = perspectiveMatrix.dot(rVertex)
-                projectedVertex /= projectedVertex[3]
+                r_vertex = np.append(v, 1)
+                r_vertex[2] -= 10
+                projected_vertex = perspectiveMatrix.dot(r_vertex)
+                projected_vertex /= projected_vertex[3]
                 
-                glVertex3f(*projectedVertex[:3])
+                glVertex3f(*projected_vertex[:3])
     glEnd()
 
 def main():
@@ -274,13 +279,13 @@ def main():
     pygame.display.set_mode(display, DOUBLEBUF | OPENGL)
 
     clock = pygame.time.Clock()
-    rotationAngle = 0
+    rotation_angle = 0
 
     # load object file
     # TODO: accept file paths from the user
-    vertices, normals, faces, texCoords = loadObjectFile("objects/ship.obj")
+    vertices, normals, faces, tex_coords = load_object_file("objects/ship.obj")
     if (vertices == None and normals == None and faces == None 
-        and texCoords == None):
+        and tex_coords == None):
         # invalid filepath end point
         print("Exiting...")
         return 1
@@ -290,7 +295,8 @@ def main():
         print("Exiting...")
         return 1
 
-    # enable depth testing --> possibly implement this myself: depth buffering or painter's algo
+    # enable depth testing
+    # --> possibly implement this myself: depth buffering or painter's algo
     glEnable(GL_DEPTH_TEST)
     glDepthFunc(GL_LESS)
 
@@ -302,11 +308,12 @@ def main():
                 running = False
         
         # allow for rotation but prevent the angle value from getting too big
-        rotationAngle = (rotationAngle + 0.02) % (6 * math.pi)
+        rotation_angle = (rotation_angle + 0.02) % (6 * math.pi)
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
-        # drawCube(rotationAngle)
-        drawObject(vertices, faces, normals, (rotationAngle, rotationAngle, rotationAngle))
+        # drawCube(rotation_angle)
+        draw_object(vertices, faces, normals, (rotation_angle, 
+                                               rotation_angle, rotation_angle))
         pygame.display.flip()
 
         clock.tick(60) # cap framerate
