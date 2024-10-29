@@ -6,6 +6,10 @@ import numpy as np
 import math
 from typing import List, Tuple
 
+class Camera:
+    # TODO: implement this
+    pass
+
 def load_object_file(file_name: str) -> Tuple[List[List[float]],
                                               List[List[float]],
                                               List[Tuple[List[int], List[int], 
@@ -255,7 +259,7 @@ def draw_object(vertices: List[List[float]], faces: List[List[int]],
             for v in [rv0, rv1, rv2]:
                 # apply perspective projection
                 r_vertex = np.append(v, 1)
-                r_vertex[2] -= 10
+                r_vertex[2] -= 30
                 projected_vertex = perspectiveMatrix.dot(r_vertex)
                 projected_vertex /= projected_vertex[3]
                 
@@ -284,7 +288,7 @@ def main():
 
     # load object file
     # TODO: accept file paths from the user
-    vertices, normals, faces, tex_coords = load_object_file("objects/ship.obj")
+    vertices, normals, faces, tex_coords = load_object_file("objects/axis.obj")
     if (vertices == None and normals == None and faces == None 
         and tex_coords == None):
         # invalid filepath end point
@@ -309,7 +313,7 @@ def main():
                 running = False
         
         # allow for rotation but prevent the angle value from getting too big
-        rotation_angle = (rotation_angle + 0.02) % (6 * math.pi)
+        # rotation_angle = (rotation_angle + 0.02) % (6 * math.pi)
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
         # drawCube(rotation_angle)
