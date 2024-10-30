@@ -28,6 +28,25 @@ class Camera:
         self.up = np.array(up, dtype=np.float32)
         self.move_speed = move_speed
         self.sens = sens
+    
+    @property
+    def forward(self):
+        """
+        Computes the forward vector using current camera target and position.
+
+        :return: the updated forward vector
+        """
+        forward = self.target - self.position
+        return forward / np.linalg.norm(forward)
+    
+    @property
+    def right(self):
+        """
+        Computes the right vector using current up and forward vectors.
+
+        :return: the updated forward vector
+        """
+        return np.cross(self.forward, self.up)
 
     @staticmethod
     def generate_look_at_matrix(position, target, up):
