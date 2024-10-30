@@ -46,7 +46,8 @@ class Camera:
 
         :return: the updated forward vector
         """
-        return np.cross(self.forward, self.up)
+        right = np.cross(self.forward, self.up)
+        return right / np.linalg.norm(right)
 
     @staticmethod
     def generate_look_at_matrix(position, target, up):
@@ -63,21 +64,22 @@ class Camera:
         # generate vectors that define the new space
         forward = target - position
         forward /= np.linalg.norm(forward)
-        right = np.cross(up, forward)
+        right = np.cross(forward, up)
         right /= np.linalg.norm(right)
-        new_up = np.cross(forward, right)
+        new_up = np.cross(right, forward)
 
         # construct the look-at matrix
         look_at = np.array([
             [right[0], new_up[0], -forward[0], 0],
             [right[1], new_up[1], -forward[1], 0],
             [right[2], new_up[2], -forward[2], 0],
-            [-np.dot(right, position), -np.dot(new_up, position), -np.dot(forward, position), 1]
+            [-np.dot(right, position), -np.dot(new_up, position),
+             np.dot(forward, position), 1]
         ], dtype=np.float32)
 
         return look_at
     
-    def move(self, direction: str):
+    def move(self, direction: str) -> None:
         if (direction == "FORWARD"):
             # move the camera forward
             self.position += self.speed * self.forward
@@ -105,6 +107,16 @@ class Camera:
         :return: the generated look-at matrix.
         """
         return self.generate_look_at_matrix(self.position, self.target, self.up)
+
+def handle_movement(keys, camera: Camera) -> None:
+    if (keys[pygame.K_w]):
+        camera.move("FORWARD")
+    elif (keys[pygame.K_s]):
+        camera.move("BACKWARD")
+    elif (keys[pygame.K_a]):
+        camera.move("LEFT")
+    elif (keys[pygame.K_d]):
+        camera.move("RIGHT")
 
 def load_object_file(file_name: str) -> Tuple[List[List[float]],
                                               List[List[float]],
@@ -300,7 +312,8 @@ def compute_normal(v0: List[float], v1: List[float],
 
 def draw_object(vertices: List[List[float]], faces: List[List[int]], 
                normals: List[List[float]], 
-               rotation_angles: Tuple[float, float, float]) -> None:
+               rotation_angles: Tuple[float, float, float],
+               camera: Camera) -> None:
     """
     Draw a loaded OBJ model with lighting and perspective projection, computing
     normals and visibility for each triangle separately.
@@ -318,9 +331,13 @@ def draw_object(vertices: List[List[float]], faces: List[List[int]],
     combined_rotation = rotation_matrix_x.dot(
                         rotation_matrix_y).dot(rotation_matrix_z)
 
-    # generate perspective projection matrix
-    perspectiveMatrix = generate_perspective_matrix(np.radians(45), 
+    # generate perspective projection matrix and look-at matrix
+    perspective_matrix = generate_perspective_matrix(np.radians(45), 
                                                     4/3, 0.1, 50.0)
+    look_at_matrix = camera.get_look_at_matrix()
+
+    # combine the perspective and look-at matrices for a total view matrix
+    view_matrix = perspective_matrix.dot(look_at_matrix) # view x perspective
 
     # begin render
     glBegin(GL_TRIANGLES)
@@ -331,6 +348,11 @@ def draw_object(vertices: List[List[float]], faces: List[List[int]],
         rv1 = combined_rotation.dot(np.append(v1, 1))[:3]
         rv2 = combined_rotation.dot(np.append(v2, 1))[:3]
 
+        # apply camera view transform
+        cv0 = view_matrix.dot(np.append(rv0, 1))
+        cv1 = view_matrix.dot(np.append(rv1, 1))
+        cv2 = view_matrix.dot(np.append(rv2, 1))
+
         if (normal_indices):
             # use normals provided in the .obj file
             n0, n1, n2 = [normals[i] for i in normal_indices]
@@ -340,7 +362,7 @@ def draw_object(vertices: List[List[float]], faces: List[List[int]],
             normal = np.mean([rn0, rn1, rn2], axis=0)
         else:
             # compute the normal for this triangle if not supplied in the .obj
-            normal = compute_normal(rv0, rv1, rv2)
+            normal = compute_normal(cv0[:3], cv1[:3], cv2[:3])
 
         # check if the triangle is visible
         if is_face_visible(normal):
@@ -350,25 +372,15 @@ def draw_object(vertices: List[List[float]], faces: List[List[int]],
             glColor3f(color, color, color)
 
             # project and draw each vertex
-            for v in [rv0, rv1, rv2]:
+            for v in [cv0, cv1, cv2]:
                 # apply perspective projection
-                r_vertex = np.append(v, 1)
-                r_vertex[2] -= 30
-                projected_vertex = perspectiveMatrix.dot(r_vertex)
-                projected_vertex /= projected_vertex[3]
+                # r_vertex = np.append(v, 1)
+                # r_vertex[2] -= 30
+                projected_vertex = v / v[3]
+                # projected_vertex /= projected_vertex[3]
                 
                 glVertex3f(*projected_vertex[:3])
     glEnd()
-
-def handle_movement(keys, camera: Camera) -> None:
-    if (keys[pygame.K_w]):
-        camera.move("FORWARD")
-    elif (keys[pygame.K_s]):
-        camera.move("BACKWARD")
-    elif (keys[pygame.K_a]):
-        camera.move("LEFT")
-    elif (keys[pygame.K_d]):
-        camera.move("RIGHT")
 
 def main():
     """
@@ -429,8 +441,8 @@ def main():
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
         # drawCube(rotation_angle)
-        draw_object(vertices, faces, normals, (rotation_angle, 
-                                               rotation_angle, rotation_angle))
+        draw_object(vertices, faces, normals,
+                    (rotation_angle, rotation_angle, rotation_angle), camera)
         pygame.display.flip()
 
         clock.tick(60) # cap framerate
