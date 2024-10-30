@@ -6,9 +6,39 @@ import numpy as np
 import math
 from typing import List, Tuple
 
+# motion variables
+MOVE_SPEED = 0.05
+SENSITIVITY = 0.001
+
 class Camera:
-    # TODO: implement this
-    pass
+    def __init__(self, position: List[float], target: List[float],
+                 up: List[float]):
+        self.position = np.array(position, dtype=np.float32)
+        self.target = np.array(target, dtype=np.float32)
+        self.up = np.array(up, dtype=np.float32)
+
+    @staticmethod
+    def generate_look_at_matrix(position, target, up):
+        
+        # generate vectors that define the new space
+        forward = target - position
+        forward /= np.linalg.norm(forward)
+        right = np.cross(up, forward)
+        right /= np.linalg.norm(right)
+        new_up = np.cross(forward, right)
+
+        # construct the look-at matrix
+        look_at = np.array([
+            [right[0], new_up[0], -forward[0], 0],
+            [right[1], new_up[1], -forward[1], 0],
+            [right[2], new_up[2], -forward[2], 0],
+            [-np.dot(right, position), -np.dot(new_up, position), -np.dot(forward, position), 1]
+        ], dtype=np.float32)
+
+        return look_at
+    
+    def get_look_at_matrix(self):
+        return self.generate_look_at_matrix(self.position, self.target, self.up)
 
 def load_object_file(file_name: str) -> Tuple[List[List[float]],
                                               List[List[float]],
@@ -266,6 +296,9 @@ def draw_object(vertices: List[List[float]], faces: List[List[int]],
                 glVertex3f(*projected_vertex[:3])
     glEnd()
 
+def handle_movement(keys, camera_pos: List[bool], camera_direction) -> None:
+    pass
+
 def main():
     """
     Initialises Pygame modules, setting up frameworks for graphics and event
@@ -300,6 +333,9 @@ def main():
         print("Exiting...")
         return 1
 
+    # initialise camera
+    camera = Camera([0.0, 0.0, 0.0], [0.0, 0.0, 1.0], [0.0, 1.0, 0.0])
+
     # enable depth testing
     # --> possibly implement this myself: depth buffering or painter's algo
     glEnable(GL_DEPTH_TEST)
@@ -311,6 +347,9 @@ def main():
         for event in pygame.event.get():
             if (event.type == pygame.QUIT):
                 running = False
+            
+            keys = pygame.key.get_pressed()
+            # handle_movement(keys, [0,0,0])
         
         # allow for rotation but prevent the angle value from getting too big
         # rotation_angle = (rotation_angle + 0.02) % (6 * math.pi)
