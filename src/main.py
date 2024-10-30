@@ -6,19 +6,40 @@ import numpy as np
 import math
 from typing import List, Tuple
 
-# motion variables
-MOVE_SPEED = 0.05
-SENSITIVITY = 0.001
-
 class Camera:
+    """
+    Represents a camera object to allow the user to observe 3D space. Packages
+    position, target and up vectors and handles camera functionality using
+    look-at matrix principles. Also handles W, A, S, D and mouse inputs to
+    simulate motion in a 3D space.
+    """
+
     def __init__(self, position: List[float], target: List[float],
-                 up: List[float]):
+                 up: List[float], move_speed: float, sens: float):
+        """
+        Initialises the Camera object.
+
+        :param position: the camera's initial position in 3D space
+        :param target: the point the camera is aimed at
+        :param up: the 'up' direction vector, defines the camera's orientation
+        """
         self.position = np.array(position, dtype=np.float32)
         self.target = np.array(target, dtype=np.float32)
         self.up = np.array(up, dtype=np.float32)
+        self.move_speed = move_speed
+        self.sens = sens
 
     @staticmethod
     def generate_look_at_matrix(position, target, up):
+        """
+        Constructs the look-at matrix using position, target and up vectors.
+
+        :param position: current camera position in 3D sppace
+        :param target: the point the camera is aimed at
+        :param up: up direction vector, defines the camera's orientation
+        :return: the 4x4 look-at matrix that converts points into the new 
+                 observation vector space
+        """
         
         # generate vectors that define the new space
         forward = target - position
@@ -38,6 +59,11 @@ class Camera:
         return look_at
     
     def get_look_at_matrix(self):
+        """
+        Gets the look-at matrix.
+
+        :return: the generated look-at matrix.
+        """
         return self.generate_look_at_matrix(self.position, self.target, self.up)
 
 def load_object_file(file_name: str) -> Tuple[List[List[float]],
@@ -50,9 +76,7 @@ def load_object_file(file_name: str) -> Tuple[List[List[float]],
 
     :param file_name: path to the .obj file
     :return: tuple containing lists of vertices, normals, faces, and 
-             texture coordinates.
-             Faces are returned as a tuple of vertex indices, normal indices, 
-             and texture indices.
+             texture coordinates, faces are returned as a tuple of vertex indices, normal indices, and texture indices.
     """
     vertices = []
     normals = []
