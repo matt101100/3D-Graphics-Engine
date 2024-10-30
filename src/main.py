@@ -279,7 +279,7 @@ def compute_lighting(face_normal: List[float]) -> float:
     dot_prod = np.dot(face_normal, light_direction)
     return max(dot_prod, 0) # clamp to 0 for normals facing away
 
-def is_face_visible(face_normal: List[float], camera_direction=[0, 0, 1]):
+def is_face_visible(face_normal: List[float], camera_direction: List[float]):
     """
     Returns a bool based on whether a face with face_normal can be seen from
     the current camera position. Uses the dot product between the camera and 
@@ -289,7 +289,7 @@ def is_face_visible(face_normal: List[float], camera_direction=[0, 0, 1]):
     :param face_normal: 1x3 normal vector given as a list of floats
     :param camera_direction: direction the camera faces, defaults to (0, 0, 0)
     :return: a bool representing whether the face with given normal is visible 
-             from the camera at cameraPos
+             from the camera facing in the direction camera_direction
     """
     dot_prod = np.dot(face_normal, camera_direction)
     return dot_prod > 0 # only true when face is visible
@@ -365,7 +365,7 @@ def draw_object(vertices: List[List[float]], faces: List[List[int]],
             normal = compute_normal(cv0[:3], cv1[:3], cv2[:3])
 
         # check if the triangle is visible
-        if is_face_visible(normal):
+        if is_face_visible(normal, camera.position):
             # compute lighting for this triangle
             lighting_intensity = compute_lighting(normal)
             color = lighting_intensity
