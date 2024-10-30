@@ -15,7 +15,7 @@ class Camera:
     """
 
     def __init__(self, position: List[float], target: List[float],
-                 up: List[float], move_speed: float, sens: float):
+                 up: List[float], speed: float, sens: float):
         """
         Initialises the Camera object.
 
@@ -26,7 +26,7 @@ class Camera:
         self.position = np.array(position, dtype=np.float32)
         self.target = np.array(target, dtype=np.float32)
         self.up = np.array(up, dtype=np.float32)
-        self.move_speed = move_speed
+        self.speed = speed
         self.sens = sens
     
     @property
@@ -76,6 +76,27 @@ class Camera:
         ], dtype=np.float32)
 
         return look_at
+    
+    def move(self, direction: str):
+        if (direction == "FORWARD"):
+            # move the camera forward
+            self.position += self.speed * self.forward
+            self.target += self.speed * self.forward
+        
+        elif (direction == "BACKWARD"):
+            # move the camera backward
+            self.position -= self.speed * self.forward
+            self.target -= self.speed * self.forward
+
+        elif (direction == "LEFT"):
+            # move the camera to the left
+            self.position -= self.speed * self.right
+            self.target -= self.speed * self.right
+        
+        elif (direction == "RIGHT"):
+            # move the camera to the right
+            self.position += self.speed * self.right
+            self.target += self.speed * self.right
     
     def get_look_at_matrix(self):
         """
@@ -339,8 +360,15 @@ def draw_object(vertices: List[List[float]], faces: List[List[int]],
                 glVertex3f(*projected_vertex[:3])
     glEnd()
 
-def handle_movement(keys, camera_pos: List[bool], camera_direction) -> None:
-    pass
+def handle_movement(keys, camera: Camera) -> None:
+    if (keys[pygame.K_w]):
+        camera.move("FORWARD")
+    elif (keys[pygame.K_s]):
+        camera.move("BACKWARD")
+    elif (keys[pygame.K_a]):
+        camera.move("LEFT")
+    elif (keys[pygame.K_d]):
+        camera.move("RIGHT")
 
 def main():
     """
@@ -394,7 +422,7 @@ def main():
                 running = False
             
             keys = pygame.key.get_pressed()
-            # handle_movement(keys, [0,0,0])
+            handle_movement(keys, camera)
         
         # allow for rotation but prevent the angle value from getting too big
         # rotation_angle = (rotation_angle + 0.02) % (6 * math.pi)
