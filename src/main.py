@@ -377,7 +377,9 @@ def main():
         return 1
 
     # initialise camera
-    camera = Camera([0.0, 0.0, 0.0], [0.0, 0.0, 1.0], [0.0, 1.0, 0.0])
+    move_speed = 0.03
+    mouse_sens = 0.001
+    camera = Camera([0.0, 0.0, 0.0], [0.0, 0.0, 1.0], [0.0, 1.0, 0.0], move_speed, mouse_sens)
 
     # enable depth testing
     # --> possibly implement this myself: depth buffering or painter's algo
