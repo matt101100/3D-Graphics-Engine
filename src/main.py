@@ -48,6 +48,16 @@ class Camera:
         """
         right = np.cross(self.forward, self.up)
         return right / np.linalg.norm(right)
+    
+    @property
+    def new_up(self):
+        """
+        Computes the new up vector based on forward and right.
+
+        :return: the updated up vector
+        """
+        new_up = np.cross(self.right, self.forward)
+        return new_up / np.linalg.norm(new_up)
 
     @staticmethod
     def generate_look_at_matrix(position, target, up):
@@ -78,27 +88,25 @@ class Camera:
         ], dtype=np.float32)
 
         return look_at
-    
+
     def move(self, direction: str) -> None:
         if (direction == "FORWARD"):
             # move the camera forward
             self.position += self.speed * self.forward
-            self.target += self.speed * self.forward
         
         elif (direction == "BACKWARD"):
             # move the camera backward
             self.position -= self.speed * self.forward
-            self.target -= self.speed * self.forward
 
         elif (direction == "LEFT"):
             # move the camera to the left
             self.position -= self.speed * self.right
-            self.target -= self.speed * self.right
         
         elif (direction == "RIGHT"):
             # move the camera to the right
             self.position += self.speed * self.right
-            self.target += self.speed * self.right
+        
+        self.target = self.position + self.forward
     
     def get_look_at_matrix(self):
         """
@@ -331,38 +339,33 @@ def draw_object(vertices: List[List[float]], faces: List[List[int]],
     combined_rotation = rotation_matrix_x.dot(
                         rotation_matrix_y).dot(rotation_matrix_z)
 
-    # generate perspective projection matrix and look-at matrix
+    # generate perspective projection matrix
     perspective_matrix = generate_perspective_matrix(np.radians(45), 
                                                     4/3, 0.1, 50.0)
-    look_at_matrix = camera.get_look_at_matrix()
 
-    # combine the perspective and look-at matrices for a total view matrix
-    view_matrix = perspective_matrix.dot(look_at_matrix) # view x perspective
+    # generate the look-at matrix
+    look_at_matrix = camera.get_look_at_matrix()
+    combined_transform = look_at_matrix.dot(combined_rotation)
 
     # begin render
     glBegin(GL_TRIANGLES)
     for face, normal_indices, texture_indices in faces:
         # get the vertices for the current triangle
         v0, v1, v2 = [vertices[i] for i in face]
-        rv0 = combined_rotation.dot(np.append(v0, 1))[:3]
-        rv1 = combined_rotation.dot(np.append(v1, 1))[:3]
-        rv2 = combined_rotation.dot(np.append(v2, 1))[:3]
-
-        # apply camera view transform
-        cv0 = view_matrix.dot(np.append(rv0, 1))
-        cv1 = view_matrix.dot(np.append(rv1, 1))
-        cv2 = view_matrix.dot(np.append(rv2, 1))
+        rv0 = combined_transform.dot(np.append(v0, 1))[:3]
+        rv1 = combined_transform.dot(np.append(v1, 1))[:3]
+        rv2 = combined_transform.dot(np.append(v2, 1))[:3]
 
         if (normal_indices):
             # use normals provided in the .obj file
             n0, n1, n2 = [normals[i] for i in normal_indices]
-            rn0 = combined_rotation.dot(np.append(n0, 1))[:3]
-            rn1 = combined_rotation.dot(np.append(n1, 1))[:3]
-            rn2 = combined_rotation.dot(np.append(n2, 1))[:3]
+            rn0 = combined_transform.dot(np.append(n0, 1))[:3]
+            rn1 = combined_transform.dot(np.append(n1, 1))[:3]
+            rn2 = combined_transform.dot(np.append(n2, 1))[:3]
             normal = np.mean([rn0, rn1, rn2], axis=0)
         else:
             # compute the normal for this triangle if not supplied in the .obj
-            normal = compute_normal(cv0[:3], cv1[:3], cv2[:3])
+            normal = compute_normal(rv0, rv1, rv2)
 
         # check if the triangle is visible
         if is_face_visible(normal, camera.position):
@@ -372,12 +375,12 @@ def draw_object(vertices: List[List[float]], faces: List[List[int]],
             glColor3f(color, color, color)
 
             # project and draw each vertex
-            for v in [cv0, cv1, cv2]:
+            for v in [rv0, rv1, rv2]:
                 # apply perspective projection
-                # r_vertex = np.append(v, 1)
-                # r_vertex[2] -= 30
-                projected_vertex = v / v[3]
-                # projected_vertex /= projected_vertex[3]
+                r_vertex = np.append(v, 1)
+                r_vertex[2] -= 30
+                projected_vertex = perspective_matrix.dot(r_vertex)
+                projected_vertex /= projected_vertex[3]
                 
                 glVertex3f(*projected_vertex[:3])
     glEnd()
@@ -433,8 +436,7 @@ def main():
             if (event.type == pygame.QUIT):
                 running = False
             
-            keys = pygame.key.get_pressed()
-            handle_movement(keys, camera)
+        keys = pygame.key.get_pressed()
         
         # allow for rotation but prevent the angle value from getting too big
         # rotation_angle = (rotation_angle + 0.02) % (6 * math.pi)
@@ -444,6 +446,8 @@ def main():
         draw_object(vertices, faces, normals,
                     (rotation_angle, rotation_angle, rotation_angle), camera)
         pygame.display.flip()
+
+        handle_movement(keys, camera)
 
         clock.tick(60) # cap framerate
 
