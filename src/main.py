@@ -89,24 +89,24 @@ class Camera:
 
         return look_at
 
-    def move(self, direction: str) -> None:
-        if (direction == "FORWARD"):
-            # move the camera forward
-            self.position += self.speed * self.forward
-        
-        elif (direction == "BACKWARD"):
-            # move the camera backward
-            self.position -= self.speed * self.forward
+    # def move(self, direction: str) -> None:
+    #     if (direction == "FORWARD"):
+    #         # move the camera forward
+    #         self.position[2] += self.speed * self.target[2]
 
-        elif (direction == "LEFT"):
-            # move the camera to the left
-            self.position -= self.speed * self.right
+    #     elif (direction == "BACKWARD"):
+    #         # move the camera backward
+    #         self.position[2] -= self.speed * self.target[2]
+
+    #     elif (direction == "LEFT"):
+    #         # move the camera to the left
+    #         self.position -= self.speed * self.right
         
-        elif (direction == "RIGHT"):
-            # move the camera to the right
-            self.position += self.speed * self.right
+    #     elif (direction == "RIGHT"):
+    #         # move the camera to the right
+    #         self.position += self.speed * self.right
         
-        self.target = self.position + self.forward
+    #     # self.target = self.position + self.forward ## !! FIX THIS !! make it sot that look direction and target are different things, look dir hardcode as class variable but target needs update on each movement
     
     def get_look_at_matrix(self):
         """
@@ -115,6 +115,35 @@ class Camera:
         :return: the generated look-at matrix.
         """
         return self.generate_look_at_matrix(self.position, self.target, self.up)
+    
+    def move(self, keys, delta_time):
+        """
+        Updates the camera position based on key inputs and adjusts target 
+        for forward and strafe movement.
+
+        :param keys: the key states (from Pygame's key.get_pressed())
+        :param delta_time: the time elapsed since the last frame
+        """
+        # Movement speed scaled by delta_time
+        velocity = self.speed * delta_time
+
+        # Forward and backward movement
+        if keys[pygame.K_w]:  # Move forward
+            self.position += self.forward * velocity
+            # self.target += self.forward * velocity
+        if keys[pygame.K_s]:  # Move backward
+            self.position -= self.forward * velocity
+            # self.target -= self.forward * velocity
+
+        # Right and left strafe movement
+        if keys[pygame.K_d]:  # Move right
+            self.position += self.right * velocity
+            # self.target += self.right * velocity
+        if keys[pygame.K_a]:  # Move left
+            self.position -= self.right * velocity
+            # self.target -= self.right * velocity
+        
+        self.target = self.position + self.forward
 
 def handle_movement(keys, camera: Camera) -> None:
     if (keys[pygame.K_w]):
@@ -368,7 +397,7 @@ def draw_object(vertices: List[List[float]], faces: List[List[int]],
             normal = compute_normal(rv0, rv1, rv2)
 
         # check if the triangle is visible
-        if is_face_visible(normal, camera.position):
+        if is_face_visible(normal, camera.forward):
             # compute lighting for this triangle
             lighting_intensity = compute_lighting(normal)
             color = lighting_intensity
@@ -378,7 +407,7 @@ def draw_object(vertices: List[List[float]], faces: List[List[int]],
             for v in [rv0, rv1, rv2]:
                 # apply perspective projection
                 r_vertex = np.append(v, 1)
-                r_vertex[2] -= 30
+                r_vertex[2] -= 40
                 projected_vertex = perspective_matrix.dot(r_vertex)
                 projected_vertex /= projected_vertex[3]
                 
@@ -422,7 +451,7 @@ def main():
     # initialise camera
     move_speed = 0.03
     mouse_sens = 0.001
-    camera = Camera([0.0, 0.0, 0.0], [0.0, 0.0, 1.0], [0.0, 1.0, 0.0], move_speed, mouse_sens)
+    camera = Camera([0.0, 0.0, 0.0], [0.0, 0.0, -1.0], [0.0, 1.0, 0.0], move_speed, mouse_sens)
 
     # enable depth testing
     # --> possibly implement this myself: depth buffering or painter's algo
@@ -436,7 +465,10 @@ def main():
             if (event.type == pygame.QUIT):
                 running = False
             
+        delta_time = clock.tick(60) / 1000.0
         keys = pygame.key.get_pressed()
+        # handle_movement(keys, camera)
+        camera.move(keys, delta_time)
         
         # allow for rotation but prevent the angle value from getting too big
         # rotation_angle = (rotation_angle + 0.02) % (6 * math.pi)
@@ -447,9 +479,7 @@ def main():
                     (rotation_angle, rotation_angle, rotation_angle), camera)
         pygame.display.flip()
 
-        handle_movement(keys, camera)
-
-        clock.tick(60) # cap framerate
+        # clock.tick(60) # cap framerate
 
     pygame.quit()
 
