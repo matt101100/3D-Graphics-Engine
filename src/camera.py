@@ -80,10 +80,6 @@ class Camera:
         # calculate new right direction
         new_right = np.cross(new_up, forward)
 
-        # right = np.cross(forward, up)
-        # right /= np.linalg.norm(right)
-        # new_up = np.cross(right, forward)
-
         # construct the look-at matrix
         look_at = np.array([
             [forward[0], new_right[0], new_up[0], 0],
