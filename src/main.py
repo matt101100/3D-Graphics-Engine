@@ -269,7 +269,7 @@ def draw_object(vertices: List[List[float]], faces: List[List[int]],
             for v in [rv0, rv1, rv2]:
                 # apply perspective projection
                 r_vertex = np.append(v, 1)
-                # r_vertex[2] -= 20
+                r_vertex[2] -= 20
                 projected_vertex = perspective_matrix.dot(r_vertex)
                 projected_vertex /= projected_vertex[3]
                 

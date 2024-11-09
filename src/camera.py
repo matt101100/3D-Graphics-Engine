@@ -68,20 +68,28 @@ class Camera:
                  observation vector space
         """
         
-        # generate vectors that define the new space
-        forward = target - position
+        # calculate new forward direction
+        forward = np.subtract(target, position)
         forward /= np.linalg.norm(forward)
-        right = np.cross(forward, up)
-        right /= np.linalg.norm(right)
-        new_up = np.cross(right, forward)
+        
+        # calculate new up direction
+        temp = np.multiply(forward, np.dot(up, forward))
+        new_up = np.subtract(up, temp)
+        new_up /= np.linalg.norm(new_up)
+
+        # calculate new right direction
+        new_right = np.cross(new_up, forward)
+
+        # right = np.cross(forward, up)
+        # right /= np.linalg.norm(right)
+        # new_up = np.cross(right, forward)
 
         # construct the look-at matrix
         look_at = np.array([
-            [right[0], new_up[0], -forward[0], 0],
-            [right[1], new_up[1], -forward[1], 0],
-            [right[2], new_up[2], -forward[2], 0],
-            [-np.dot(right, position), -np.dot(new_up, position),
-             np.dot(forward, position), 1]
+            [forward[0], new_right[0], new_up[0], 0],
+            [forward[1], new_right[1], new_up[1], 0],
+            [forward[2], new_right[2], new_up[2], 0],
+            [-np.dot(position, forward), -np.dot(position, new_right), -np.dot(position, new_up), 1]
         ], dtype=np.float32)
 
         return look_at
