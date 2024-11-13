@@ -25,6 +25,7 @@ class Camera:
         self.up = np.array(up, dtype=np.float32)
         self.speed = speed
         self.sens = sens
+        self.right = np.array([1.0, 0.0, 0.0], dtype=np.float32)
     
     @property
     def forward(self):
@@ -36,25 +37,25 @@ class Camera:
         forward = self.target - self.position
         return forward / np.linalg.norm(forward)
     
-    @property
-    def right(self):
-        """
-        Computes the right vector using current up and forward vectors.
+    # @property
+    # def right(self):
+    #     """
+    #     Computes the right vector using current up and forward vectors.
 
-        :return: the updated forward vector
-        """
-        right = np.cross(self.forward, self.up)
-        return right / np.linalg.norm(right)
+    #     :return: the updated forward vector
+    #     """
+    #     right = np.cross(self.forward, self.up)
+    #     return right / np.linalg.norm(right)
     
-    @property
-    def new_up(self):
-        """
-        Computes the new up vector based on forward and right.
+    # @property
+    # def new_up(self):
+    #     """
+    #     Computes the new up vector based on forward and right.
 
-        :return: the updated up vector
-        """
-        new_up = np.cross(self.right, self.forward)
-        return new_up / np.linalg.norm(new_up)
+    #     :return: the updated up vector
+    #     """
+    #     new_up = np.cross(self.right, self.forward)
+    #     return new_up / np.linalg.norm(new_up)
 
     @staticmethod
     def generate_look_at_matrix(position, target, up):
@@ -89,25 +90,6 @@ class Camera:
         ], dtype=np.float32)
 
         return look_at
-
-    # def move(self, direction: str) -> None:
-    #     if (direction == "FORWARD"):
-    #         # move the camera forward
-    #         self.position[2] += self.speed * self.target[2]
-
-    #     elif (direction == "BACKWARD"):
-    #         # move the camera backward
-    #         self.position[2] -= self.speed * self.target[2]
-
-    #     elif (direction == "LEFT"):
-    #         # move the camera to the left
-    #         self.position -= self.speed * self.right
-        
-    #     elif (direction == "RIGHT"):
-    #         # move the camera to the right
-    #         self.position += self.speed * self.right
-        
-    #     # self.target = self.position + self.forward ## !! FIX THIS !! make it sot that look direction and target are different things, look dir hardcode as class variable but target needs update on each movement
     
     def get_look_at_matrix(self):
         """
@@ -119,29 +101,36 @@ class Camera:
     
     def move(self, keys, delta_time):
         """
-        Updates the camera position based on key inputs and adjusts target 
+        Updates the camera position based on key inputs and adjusts the target 
         for forward and strafe movement.
 
         :param keys: the key states (from Pygame's key.get_pressed())
         :param delta_time: the time elapsed since the last frame
         """
-        # movement speed scaled by delta_time
+        # Movement speed scaled by delta_time
         velocity = self.speed * delta_time
 
-        # forward and backward movement
-        if keys[pygame.K_w]:  # forward
-            self.position += self.forward * velocity
-            # self.target += self.forward * velocity
-        if keys[pygame.K_s]:  # backward
-            self.position -= self.forward * velocity
-            # self.target -= self.forward * velocity
+        # Get the forward and right vectors
+        forward = self.forward
+        right = self.right
 
-        # right and left strafe movement
-        if keys[pygame.K_d]:  # right
-            self.position += self.right * velocity
-            # self.target += self.right * velocity
-        if keys[pygame.K_a]:  # left
-            self.position -= self.right * velocity
-            # self.target -= self.right * velocity
-        
+        # Forward and backward movement
+        if keys[pygame.K_w]:  # Move forward
+            self.position += forward * velocity
+        if keys[pygame.K_s]:  # Move backward
+            self.position -= forward * velocity
+
+        # Right and left strafe movement
+        if keys[pygame.K_d]:  # Strafe right
+            self.position += right * velocity
+        if keys[pygame.K_a]:  # Strafe left
+            self.position -= right * velocity
+
+
+        # Update the target so it stays relative to the camera's new position
         self.target = self.position + self.forward
+
+        print(f"position: {self.position}")
+        # print(f"target: {self.target}")
+        print(f"forward: {self.forward}")
+        print(f"right: {self.right}")

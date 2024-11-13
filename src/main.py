@@ -161,7 +161,15 @@ def generate_rotation_matrix_z(angle: float) -> np.ndarray:
         [-math.sin(angle), math.cos(angle), 0 ,0],
         [0, 0, 1, 0],
         [0, 0, 0, 1]
-    ])
+    ], dtype=np.float32)
+
+def generate_translation_matrix(x: float, y: float, z: float) -> np.ndarray:
+    return np.array([
+        [1, 0, 0, 0],
+        [0, 1, 0, 0],
+        [0, 0, 1, 0],
+        [x, y, z, 1]
+    ], dtype=np.float32)
 
 def compute_lighting(face_normal: List[float]) -> float:
     """
@@ -236,30 +244,32 @@ def draw_object(vertices: List[List[float]], faces: List[List[int]],
 
     # generate the look-at matrix
     look_at_matrix = camera.get_look_at_matrix()
-    combined_transform = combined_rotation.dot(look_at_matrix)
 
     # begin render
     glBegin(GL_TRIANGLES)
     for face, normal_indices, texture_indices in faces:
         # get the vertices for the current triangle
         v0, v1, v2 = [vertices[i] for i in face]
-        rv0 = combined_transform.dot(np.append(v0, 1))[:3]
-        rv1 = combined_transform.dot(np.append(v1, 1))[:3]
-        rv2 = combined_transform.dot(np.append(v2, 1))[:3]
+        rv0 = combined_rotation.dot(np.append(v0, 1))[:3]
+        rv1 = combined_rotation.dot(np.append(v1, 1))[:3]
+        rv2 = combined_rotation.dot(np.append(v2, 1))[:3]
 
         if (normal_indices):
             # use normals provided in the .obj file
             n0, n1, n2 = [normals[i] for i in normal_indices]
-            rn0 = combined_transform.dot(np.append(n0, 1))[:3]
-            rn1 = combined_transform.dot(np.append(n1, 1))[:3]
-            rn2 = combined_transform.dot(np.append(n2, 1))[:3]
+            rn0 = combined_rotation.dot(np.append(n0, 1))[:3]
+            rn1 = combined_rotation.dot(np.append(n1, 1))[:3]
+            rn2 = combined_rotation.dot(np.append(n2, 1))[:3]
             normal = np.mean([rn0, rn1, rn2], axis=0)
         else:
             # compute the normal for this triangle if not supplied in the .obj
             normal = compute_normal(rv0, rv1, rv2)
+        
+        # compute vector from camera to triangle
+        camera_ray = np.subtract(rv0, camera.position)
 
         # check if the triangle is visible
-        if is_face_visible(normal, camera.forward):
+        if is_face_visible(normal, camera_ray):
             # compute lighting for this triangle
             lighting_intensity = compute_lighting(normal)
             color = lighting_intensity
@@ -268,9 +278,9 @@ def draw_object(vertices: List[List[float]], faces: List[List[int]],
             # project and draw each vertex
             for v in [rv0, rv1, rv2]:
                 # apply perspective projection
-                r_vertex = np.append(v, 1)
-                r_vertex[2] -= 20
-                projected_vertex = perspective_matrix.dot(r_vertex)
+                rotated_vertex = np.append(v, 1)
+                viewed_vertex = look_at_matrix.dot(rotated_vertex)
+                projected_vertex = perspective_matrix.dot(viewed_vertex)
                 projected_vertex /= projected_vertex[3]
                 
                 glVertex3f(*projected_vertex[:3])
@@ -297,7 +307,6 @@ def main():
     rotation_angle = 0
 
     # load object file
-    # TODO: accept file paths from the user
     vertices, normals, faces, tex_coords = load_object_file("objects/axis.obj")
     if (vertices == None and normals == None and faces == None 
         and tex_coords == None):
@@ -311,8 +320,11 @@ def main():
         return 1
 
     # initialise camera
-    move_speed = 5
+    move_speed = 3
     mouse_sens = 0.001
+    # look_direction_vec = [0.0, 0.0, 1.0]
+    # up_vec = [0.0, 1.0, 0.0]
+    # target_vec = np.add([0.0, 0.0, 0.0], look_direction_vec)
     camera = Camera([0.0, 0.0, 0.0], [0.0, 0.0, -1.0], [0.0, 1.0, 0.0], move_speed, mouse_sens)
 
     # enable depth testing
@@ -329,14 +341,12 @@ def main():
             
         delta_time = clock.tick(60) / 1000.0
         keys = pygame.key.get_pressed()
-        # handle_movement(keys, camera)
         camera.move(keys, delta_time)
         
         # allow for rotation but prevent the angle value from getting too big
         # rotation_angle = (rotation_angle + 0.02) % (6 * math.pi)
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
 
-        # drawCube(rotation_angle)
         draw_object(vertices, faces, normals,
                     (rotation_angle, rotation_angle, rotation_angle), camera)
         pygame.display.flip()
