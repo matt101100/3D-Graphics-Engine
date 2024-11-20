@@ -199,7 +199,7 @@ def is_face_visible(face_normal: List[float], camera_direction: List[float]):
              from the camera facing in the direction camera_direction
     """
     dot_prod = np.dot(face_normal, camera_direction)
-    return dot_prod > 0 # only true when face is visible
+    return dot_prod > 0.0 # only true when face is visible
 
 def compute_normal(v0: List[float], v1: List[float],
                    v2: List[float]) -> List[float]:
@@ -240,7 +240,7 @@ def draw_object(vertices: List[List[float]], faces: List[List[int]],
 
     # generate perspective projection matrix
     perspective_matrix = generate_perspective_matrix(np.radians(45), 
-                                                    4/3, 0.1, 50.0)
+                                                    4/3, 0.001, 100.0)
 
     # generate the look-at matrix
     look_at_matrix = camera.get_look_at_matrix()
